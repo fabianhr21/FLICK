@@ -1,0 +1,355 @@
+from __future__ import print_function, division
+
+import mpi4py 
+mpi4py.rc.recv_mprobe = False
+from mpi4py import MPI
+
+from stl import mesh
+import numpy as np
+import math
+import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+import pyAlya
+import h5py
+
+mpi_comm = MPI.COMM_WORLD
+mpi_rank = mpi_comm.Get_rank()
+mpi_size = mpi_comm.Get_size()
+
+def plane_generation(Length,nx,ny):
+
+	# Generate partition table
+	ptable = pyAlya.PartitionTable.new(1,nelems=(nx-1)*(ny-1),npoints=nx*ny)
+
+	# Generate points
+	points = np.array([
+		[-Length,-Length,0.0],
+		[ Length,-Length,0.0],
+		[ Length, Length,0.0],
+		[-Length, Length,0.0]
+		],dtype='double')
+
+	# Generate plane mesh
+	return pyAlya.Mesh.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,compute_massMatrix=False)
+
+def solid_perimeter_generation(triangles,dist_resolution) -> None:
+
+        perimeter=[]
+        for tri in triangles:
+                v1=np.zeros(3)
+                v2=np.zeros(3)
+                if tri[0][2]!=0: 
+                        v1=tri[1]
+                        v2=tri[2]
+                elif tri[1][2]!=0:
+                        v1=tri[0]
+                        v2=tri[2]
+                elif tri[2][2]!=0:
+                        v1=tri[0]
+                        v2=tri[1]
+                
+                nsteps=int(np.linalg.norm(v2-v1)/dist_resolution)
+                if nsteps>1: 
+                        dLam=1.0/nsteps
+                        Lam=0.0
+                        perimeter.append(v1)
+                        for i in range(nsteps):
+                                Lam+=dLam
+                                x=v1+Lam*(v2-v1)
+                                perimeter.append(x)
+                        perimeter.append(v2)
+                else: 
+                        perimeter.append(v1)
+                        perimeter.append(v2)
+
+        return np.array(perimeter)
+
+def geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles,dist_resolution):
+
+        h_triangles=np.copy(horizontal_triangles)
+        h_triangles[:,:,2]=0
+        
+        perimeter=solid_perimeter_generation(vertical_triangles,dist_resolution)
+
+        points=np.copy(target_mesh)
+        points[:,2]=0.0
+
+        size_G=points.shape[0]
+        size_L=int(size_G/mpi_size)
+        ini_idx=size_L*mpi_rank
+        final_idx=size_L*(mpi_rank+1)-1
+        if mpi_rank==(mpi_size-1): final_idx=size_G-1
+
+        subset=points[ini_idx:final_idx+1]
+        
+        mask_L=np.zeros(subset.shape[0])
+        height_L=np.zeros(subset.shape[0])
+        distance_L=np.zeros(subset.shape[0])
+
+        for idx,p in enumerate(subset):
+                tri_idx=isIn(p,h_triangles)
+                if tri_idx<0:
+                        mask_L[idx]=1
+                        height_L[idx]=0
+                else:
+                        mask_L[idx]=0
+                        height_L[idx]=horizontal_triangles[tri_idx][0][2]
+
+                if mask_L[idx]==1:
+                        distance_L[idx]=wall_distance(p,perimeter)
+
+        recv_buff_mask = mpi_comm.allgather(mask_L)
+        recv_buff_height = mpi_comm.allgather(height_L)
+        recv_buff_distance = mpi_comm.allgather(distance_L)
+        
+        mask_G=recv_buff_mask[0]
+        height_G=recv_buff_height[0]
+        distance_G=recv_buff_distance[0]
+        for i in range(mpi_size-1):
+                mask_G=np.concatenate((mask_G,recv_buff_mask[i+1]),axis=0)
+                height_G=np.concatenate((height_G,recv_buff_height[i+1]),axis=0)
+                distance_G=np.concatenate((distance_G,recv_buff_distance[i+1]),axis=0)
+
+        fields = pyAlya.Field(xyz = points, ptable=pyAlya.PartitionTable.new(1,1,0))
+
+        fields['MASK'] = mask_G
+        fields['HEGT'] = height_G
+        fields['WDST'] = distance_G
+
+        return fields
+
+def wall_distance(point,perimeter):
+
+        point_vec=np.tile(point,(perimeter.shape[0],1))
+
+        dist=np.linalg.norm(perimeter-point_vec,axis=1)
+        return np.amin(dist)
+
+def isIn(point,triangles):
+
+        point_vec=np.tile(point,(triangles.shape[0],1))
+
+        v0 =triangles[:,0,:] 
+        v1 =triangles[:,1,:] 
+        v2 =triangles[:,2,:] 
+
+        S=0.5*np.linalg.norm(np.cross(v1-v0,v2-v0,axis=1),axis=1)
+        S1=0.5*np.linalg.norm(np.cross(v0-point_vec,v1-point_vec,axis=1),axis=1)
+        S2=0.5*np.linalg.norm(np.cross(v1-point_vec,v2-point_vec,axis=1),axis=1)
+        S3=0.5*np.linalg.norm(np.cross(v2-point_vec,v0-point_vec,axis=1),axis=1)
+
+        isIn=abs((S1+S2+S3)-S)<0.001
+        
+        output=np.where(isIn==True)[0]
+
+        return output[0] if len(output) > 0 else -1
+
+def display_scalarfield(plane):
+
+        plt.imshow(plane, cmap='plasma')
+        plt.show()
+
+def save_scalarfield(plane,filename):
+
+        plt.imsave(filename, plane)
+
+
+
+def display_points(points):
+        x=points[:,0]
+        y=points[:,1]
+        z=points[:,2]
+
+        fig=plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x,y,z,s=1.0)
+        plt.show()
+
+def display_points_plane(points,plane):
+        x=points[:,0]
+        y=points[:,1]
+        z=points[:,2]
+
+        x1=plane[0].flatten()
+        y1=plane[1].flatten()
+        z1=np.zeros(len(x1))
+
+        fig=plt.figure()
+        ax = fig.add_subplot()
+        ax.scatter(x,y,s=0.1)
+        ax.scatter(x1,y1,s=1.0,c='#ff7f0e')
+        plt.show()
+
+def display_stl(mesh):
+        # Create a new plot
+
+        figure = plt.figure()
+        axes = figure.add_subplot(projection='3d')
+        axes.add_collection3d(mplot3d.art3d.Poly3DCollection(mesh.vectors))
+
+        # Auto scale to the mesh size
+        scale = mesh.points.flatten()
+        axes.auto_scale_xyz(scale, scale, scale)
+        # Show the plot to the screen
+        plt.show()
+
+def display_triangles(triangles):
+        points=triangles.reshape(triangles.shape[0]*3,-1)
+        display_points(points)
+
+
+        
+def rotate_stl(stl,angles,center=np.array([0, 0, 0])):
+        
+		alpha = math.pi*angles[2]/180.0
+		beta  = math.pi*angles[1]/180.0
+		gamma = math.pi*angles[0]/180.0
+        
+		R = np.ndarray(shape=(3,3))
+        
+		R[0][0] = math.cos(alpha)*math.cos(beta)
+		R[1][0] = math.cos(alpha)*math.sin(beta)*math.sin(gamma)-math.sin(alpha)*math.cos(gamma)
+		R[2][0] = math.cos(alpha)*math.sin(beta)*math.cos(gamma)+math.sin(alpha)*math.sin(gamma)
+		R[0][1] = math.sin(alpha)*math.cos(beta)
+		R[1][1] = math.sin(alpha)*math.sin(beta)*math.sin(gamma)+math.cos(alpha)*math.cos(gamma)
+		R[2][1] = math.sin(alpha)*math.sin(beta)*math.cos(gamma)-math.cos(alpha)*math.sin(gamma)
+		R[0][2] = -math.sin(beta)
+		R[1][2] = math.cos(beta)*math.sin(gamma)
+		R[2][2] = math.cos(beta)*math.cos(gamma)
+
+		for tri, triangle in enumerate(stl):
+			centers=np.tile(center,(3,1))
+			stl[tri] = np.dot(triangle-centers,R)+centers
+		return stl
+
+def move_stl(stl,displacement=np.array([0, 0, 0])):
+		for tri, triangle in enumerate(stl):
+			displacements=np.tile(displacement,(3,1))
+			stl[tri] = triangle+displacements
+		
+		return stl
+
+def display_stl(mesh):
+        # Create a new plot
+
+        figure = plt.figure()
+        axes = figure.add_subplot(projection='3d')
+        axes.add_collection3d(mplot3d.art3d.Poly3DCollection(mesh.vectors))
+
+        # Auto scale to the mesh size
+        scale = mesh.points.flatten()
+        axes.auto_scale_xyz(scale, scale, scale)
+        # Show the plot to the screen
+        plt.show()
+
+def geometrical_magnitudes(STL_FILE,target_mesh,stl_angle=[0.0,0.0,0.0],stl_displ=[0.0,0.0,0.0],stl_scale=1.0,dist_resolution=1.0):
+                
+                my_mesh = mesh.Mesh(np.concatenate([m.data for m in mesh.Mesh.from_multi_file(STL_FILE)]))
+                
+                triangles = stl_scale*my_mesh.vectors
+                triangles = rotate_stl(triangles,stl_angle,stl_displ)
+                triangles = move_stl(triangles,stl_displ)
+
+                horizontal_triangles=triangles[(triangles[:,0,2]==triangles[:,1,2]) & (triangles[:,0,2]==triangles[:,2,2]) & (triangles[:,0,2]!=0)]
+                vertical_triangles=triangles[((triangles[:,0,2]==0) & (triangles[:,1,2]==0) & (triangles[:,2,2]!=0)) | \
+                                        ((triangles[:,0,2]==0) & (triangles[:,1,2]!=0) & (triangles[:,2,2]==0)) | \
+                                        ((triangles[:,0,2]!=0) & (triangles[:,1,2]==0) & (triangles[:,2,2]==0))]
+                fields=geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles,dist_resolution)
+                
+                return fields
+
+#Find the bounding box of the STL file
+def calculate_bounding_box(input_file):
+    """
+    Calculate the bounding box of the vertices.
+    """
+        # Load the STL file
+    try:
+        stl_mesh = mesh.Mesh.from_file(input_file)
+    except Exception as e:
+        print(f"Error loading {input_file}: {e}")
+        return
+    
+    # Extract all vertices from the mesh
+    all_vertices = np.concatenate([stl_mesh.v0, stl_mesh.v1, stl_mesh.v2]).astype(np.float64)
+    
+    min_coords = np.min(all_vertices, axis=0).astype(np.float64)
+    max_coords = np.max(all_vertices, axis=0).astype(np.float64)
+
+    return min_coords, max_coords
+
+def append_UV_features(file_path, N_POINTS=256):
+    # Open the h5 file
+    with h5py.File(f"{file_path}-geodata.h5", 'r+') as file:
+        # Get the dimensions of the input data
+        input_xdim = N_POINTS
+        input_ydim = N_POINTS
+        
+        # Create U and V arrays of ones
+        U = np.ones((input_xdim, input_ydim))
+        
+        # Add GRDUX, GRDVY and GRDWZ arrays to the h5 file as arrays
+        file.create_dataset('/FIELD/VARIABLES/GRDUX', data=U)
+        file.create_dataset('/FIELD/VARIABLES/GRDVY', data=U)
+        file.create_dataset('/FIELD/VARIABLES/GRDWZ', data=U)
+        file.create_dataset('/FIELD/VARIABLES/U', data=U)
+        file.create_dataset('/FIELD/VARIABLES/V', data=U)     
+
+def move_stl_to_origin(stl_file, output_file):
+    # Load the STL file
+    original_mesh = mesh.Mesh.from_file(stl_file)
+
+    # Get the minimum coordinates of the mesh
+    min_bounds = np.min(original_mesh.vectors, axis=(0, 1))
+
+    # Translate the mesh to the origin
+    original_mesh.translate(-min_bounds)
+
+    # Save the translated mesh to a new file
+    original_mesh.save(output_file)
+    print(f'Saved translated STL file to: {output_file}')
+    
+def create_rotation_matrix(axis, angle):
+    axis = np.asarray(axis)
+    axis = axis / np.sqrt(np.dot(axis, axis))
+    a = np.cos(angle / 2.0)
+    b, c, d = -axis * np.sin(angle / 2.0)
+    aa, bb, cc, dd = a * a, b * b, c * c, d * d
+    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
+    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
+                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
+                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
+
+def rotate_geometry(input_filename, output_filename, axis, angle):
+    angle = np.radians(angle)
+        # Select the rotation matrix based on the chosen axis
+    if axis == 'x':
+        axis = [1,0,0]
+    elif axis == 'y':
+        axis = [0,1,0]
+    elif axis == 'z':
+        axis = [0,0,1]
+    else:
+        raise ValueError("Axis must be 'x', 'y', or 'z'")
+    # Load the STL file
+    stl_mesh = mesh.Mesh.from_file(input_filename)
+    
+    # Calculate the bounding box center
+    min_coords = np.min(stl_mesh.vectors, axis=(0, 1))
+    max_coords = np.max(stl_mesh.vectors, axis=(0, 1))
+    center = (min_coords + max_coords) / 2
+
+    # Translate vertices to the origin
+    stl_mesh.vectors -= center
+    
+    # Create the rotation matrix
+    rotation_matrix = create_rotation_matrix(axis, angle)
+    
+    # Rotate the vertices
+    stl_mesh.vectors = np.dot(stl_mesh.vectors.reshape(-1, 3), rotation_matrix.T).reshape(-1, 3, 3)
+    
+    # Translate vertices back to the original position
+    stl_mesh.vectors += center
+    
+    # Save the rotated STL file
+    stl_mesh.save(output_filename)
