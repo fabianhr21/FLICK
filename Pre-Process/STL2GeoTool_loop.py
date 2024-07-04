@@ -13,6 +13,7 @@ mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
+#### CHANGE HERE ####
 # Folders & files
 ## Input a georeferenced STL file to obtain ground control points at the end
 STL_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/'
@@ -20,8 +21,6 @@ STL_GEOREF = 'output_SHIFT_simp'
 STL_BASENAME = 'output_simp_origin'
 POST_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/output_UPC_rot/'
 
-# Generate a non-georeferenced STL file in the origin
-# move_stl_to_origin(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME+'.stl')
 STL_SCALE=1.0
 DIST_RESOLUTION=100000.0
 
@@ -34,6 +33,7 @@ N_POINTS=256 #the point at the corner must be taken into account.
 D_LENGTH= 300
 p_overlap = 0.5
 overlap = int(N_POINTS*p_overlap)
+#####################
 
 #Generate plane mesh
 
