@@ -11,7 +11,7 @@ def extract_upc_number(filename):
         return int(match.group(1))
     return float('inf')  # If no number is found, place it at the end
 
-def read_output_files(output_dir, keyword):
+def read_output_files(output_dir, keyword,x_frames,y_frames,step=256):
     sorted_list = sorted(os.listdir(output_dir),key=extract_upc_number)
     # Read the output files in one array
     matrix = []
