@@ -6,7 +6,7 @@ import re
 
 
 def extract_upc_number(filename):
-    match = re.search(r'UPC-(\d+)', filename)
+    match = re.search(r'-(\d+)', filename)
     if match:
         return int(match.group(1))
     return float('inf')  # If no number is found, place it at the end

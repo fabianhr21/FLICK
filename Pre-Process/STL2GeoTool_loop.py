@@ -40,7 +40,10 @@ overlap = int(N_POINTS*p_overlap)
 if __name__ == '__main__':
     if WIND_DIRECTION != 0:
         rotate_geometry(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_GEOREF+str(WIND_DIRECTION)+'.stl', 'z', WIND_DIRECTION)
+        mpi_comm.Barrier() 
         STL_GEOREF = STL_GEOREF + str(WIND_DIRECTION)
+        print(f'Rotated geometry to align with wind direction: {WIND_DIRECTION} in file {STL_GEOREF}.stl')
+        mpi_comm.Barrier() 
     GCP = {}
     min_coords, max_coords = calculate_bounding_box(STL_DIR+STL_GEOREF+'.stl')
     min_x = min_coords[0]
