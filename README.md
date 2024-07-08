@@ -1,5 +1,5 @@
-# FUC
-FUC - Fast modeling Urban Climate is a package developed in the Barcelona Supercomputing Center to model wind at urban scales using Neural Networks.
+# FMUC
+FMUC - Fast Modeling Urban Climate is a package developed in the Barcelona Supercomputing Center to model wind at urban scales using Neural Networks.
 ## Functionality
 This repository serves as a guideline to generate urban climate wind analysis from Mesoscale Wheater Models and Urban Geometry.
 ## Pre-Process
