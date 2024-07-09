@@ -320,8 +320,7 @@ def create_rotation_matrix(axis, angle):
                      [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
-def rotate_geometry(input_filename, output_filename, axis, angle):
-    angle = np.radians(angle)
+def rotate_geometry(input_filename, output_filename, axis, angle_list):
         # Select the rotation matrix based on the chosen axis
     if axis == 'x':
         axis = [1,0,0]
@@ -333,23 +332,19 @@ def rotate_geometry(input_filename, output_filename, axis, angle):
         raise ValueError("Axis must be 'x', 'y', or 'z'")
     # Load the STL file
     stl_mesh = mesh.Mesh.from_file(input_filename)
-    
     # Calculate the bounding box center
     min_coords = np.min(stl_mesh.vectors, axis=(0, 1))
     max_coords = np.max(stl_mesh.vectors, axis=(0, 1))
     center = (min_coords + max_coords) / 2
-
     # Translate vertices to the origin
     stl_mesh.vectors -= center
-    
     # Create the rotation matrix
-    rotation_matrix = create_rotation_matrix(axis, angle)
-    
-    # Rotate the vertices
-    stl_mesh.vectors = np.dot(stl_mesh.vectors.reshape(-1, 3), rotation_matrix.T).reshape(-1, 3, 3)
-    
-    # Translate vertices back to the original position
-    stl_mesh.vectors += center
-    
-    # Save the rotated STL file
-    stl_mesh.save(output_filename)
+    for angle in angle_list:   
+        angle_rad = np.radians(angle)
+        rotation_matrix = create_rotation_matrix(axis, angle_rad)
+        # Rotate the vertices
+        stl_mesh.vectors = np.dot(stl_mesh.vectors.reshape(-1, 3), rotation_matrix.T).reshape(-1, 3, 3)
+        # Translate vertices back to the original position
+        stl_mesh.vectors += center
+        # Save the rotated STL file
+        stl_mesh.save(output_filename+str(angle)+'.stl')
