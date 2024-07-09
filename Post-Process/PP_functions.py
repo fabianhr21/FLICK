@@ -11,55 +11,59 @@ def extract_upc_number(filename):
         return int(match.group(1))
     return float('inf')  # If no number is found, place it at the end
 
-def read_output_files(output_dir, keyword,x_frames,y_frames,step=256):
-    sorted_list = sorted(os.listdir(output_dir),key=extract_upc_number)
+def read_output_files(output_dir,N_points,y_frames,x_frames ,keyword):
+    sorted_list = sorted(os.listdir(output_dir), key=extract_upc_number)
     # Read the output files in one array
     matrix = []
+    y_dir = y_frames * N_points
+    x_dir = x_frames * N_points
     for filename in sorted_list:
         if keyword in filename:
-            with open(output_dir+filename) as f:
-                # print('Reading file:', filename)
+            with open(output_dir + filename) as f:
                 data = np.genfromtxt(f, delimiter=',')
                 matrix.append(data)
             f.close()
-    x_dir = x_frames*step
-    y_dir = y_frames*step
     complete_matrix = np.zeros((y_dir, x_dir))
     n = 0
-    for i in range(y_dir - step, -1, -step):
-        for j in range(0, x_dir, step):
-            complete_matrix[i:i+step, j:j+step] = matrix[n]
+    for i in range(y_dir - N_points, -1, -N_points):
+        for j in range(0, x_dir, N_points):
+            complete_matrix[i:i + N_points, j:j + N_points] = matrix[n]
             n += 1
-    return matrix, complete_matrix #Complete matrix is the matrix with all the frames, only visualization purposes
-#################################################### INTERPOLATION ####################################################
-def interpolate(matrix1, matrix2, overlap, axis):
-    # Generate the interpolation weights
+    return matrix, complete_matrix  # Complete matrix is the matrix with all the frames, only visualization purposes
+
+def interpolate(matrix1, matrix2, overlap, axis, factor=1):
+    # Generate the interpolation weights using an exponential decay function
     alpha = np.linspace(0, 1, overlap)
-    
+    weights_horizontal = np.exp(-alpha * 10)  # Adjust the factor to control the decay rate
+    weights_vertical = np.exp(-alpha * 2.5)  # Adjust the factor to control the decay rate
     if axis == 'horizontal':
         for i in range(overlap):
-            matrix1[:, -overlap + i] = matrix1[:, -overlap + i] * (1 - alpha[i]) + matrix2[:, i] * alpha[i]
+            weight = weights_horizontal[i]
+            matrix1[:, i] = matrix1[:, i] * (1 - weight) + matrix2[:, -overlap + i] * weight
         return matrix1
-    elif axis == 'vertical':
+    if axis == 'vertical':
         for i in range(overlap):
-            matrix1[-overlap + i, :] = matrix1[-overlap + i, :] * (1 - alpha[i]) + matrix2[i, :] * alpha[i]
+            weight = weights_vertical[i]
+            matrix1[-overlap + i, :] = matrix1[-overlap + i, :] * weight + matrix2[i, :] * (1 - weight)
         return matrix1
 
-def overlap_matrix(matrix, step, overlap, y_dir, x_frames):
-    combined_matrix = np.zeros((y_dir, overlap*x_frames+256))
+def overlap_matrix(matrix, N_points, step, overlap, y_dir, x_frames):
+    combined_matrix = np.zeros((y_dir, overlap * x_frames + N_points))
+    memory = []
     n = 0
-    for i in range(y_dir - step, -1, -overlap):
-        row = 0
-        for j in range(0, overlap*x_frames, overlap):
+    row = 0
+    for i in range(y_dir - N_points, -1, -step):
+        for j in range(0, step * x_frames, step):
             if n >= len(matrix):
                 continue
-            combined_matrix[i:i+step, j:j+step] = matrix[n]
-            n += 1
-            if j > 0 and n % x_frames != 0:
-                combined_matrix[i:i+step, j:j+step] = interpolate(combined_matrix[i:i+step, j:j+step], matrix[n-1], overlap, 'horizontal')
-            
+            temp_matrix = matrix[n].copy()
+            if j > 0:
+                temp_matrix = interpolate(temp_matrix, matrix[n - 1], overlap, 'horizontal')
             if row > 0:
-                combined_matrix[i:i+step, j:j+step] = interpolate(combined_matrix[i:i+step, j:j+step], matrix[n-x_frames], overlap, 'vertical')
+                temp_matrix = interpolate(temp_matrix, memory[n - x_frames], overlap, 'vertical')
+            combined_matrix[i:i + N_points, j:j + N_points] = temp_matrix
+            memory.append(temp_matrix)
+            n += 1
         row += 1
     return combined_matrix
 
