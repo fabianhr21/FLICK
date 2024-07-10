@@ -1,0 +1,11 @@
+numpy>=1.21.6
+scipy>=1.5.4
+cython
+mpi4py
+matplotlib
+nfft
+h5py
+matplotlib
+pandas
+math
+python-stl
