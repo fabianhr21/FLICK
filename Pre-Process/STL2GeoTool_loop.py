@@ -13,64 +13,80 @@ mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
-#### CHANGE HERE ####
 # Folders & files
 ## Input a georeferenced STL file to obtain ground control points at the end
-STL_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/'
-STL_GEOREF = 'output_SHIFT_simp'
-STL_BASENAME = 'output_simp_origin'
-POST_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/output_UPC_rot/'
+STL_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/SENSORS_UPC/'
+STL_GEOREF = 'combined_output_UPC_geo'
+STL_BASENAME = 'combined_output_UPC'
+POST_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/SENSORS_UPC/'
 
+# Generate a non-georeferenced STL file in the origin
+# move_stl_to_origin(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME+'.stl')
 STL_SCALE=1.0
-DIST_RESOLUTION=100000.0
+DIST_RESOLUTION=1.0
 
 # Parameters
-WIND_DIRECTION = [45] # Rotates geometry to align with wind direction, if 0 no rotation is applied
+WIND_DIRECTION = [0] # Rotates geometry to align with wind direction
 STL_ROT_ANGLE=[0.0,0.0,0.0]
-STL_DISPLACEMENT=[0.0,0.0,0.0]
+STL_DISPLACEMENT=[0,0,0.0]
 STEP_SIZE=128  #this is L/2 where L is the side of the square
 N_POINTS=256 #the point at the corner must be taken into account.
-D_LENGTH= 300
-p_overlap = 0.5
+p_overlap = 0.50
 overlap = int(N_POINTS*p_overlap)
-#####################
+# overlap = 80 # We will cut this part in the output
+# k_size = 200
 
 #Generate plane mesh
-
 if __name__ == '__main__':
-    for WIND_DIRECTION in WIND_DIRECTION:
-        if WIND_DIRECTION != 0:
-            rotate_geometry(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_GEOREF+str(WIND_DIRECTION)+'.stl', 'z', WIND_DIRECTION)
-            mpi_comm.Barrier() 
-            STL_GEOREF = STL_GEOREF + str(WIND_DIRECTION)
-            print(f'Rotated geometry to align with wind direction: {WIND_DIRECTION} in file {STL_GEOREF}.stl')
-            mpi_comm.Barrier() 
-        GCP = {}
-        min_coords, max_coords = calculate_bounding_box(STL_DIR+STL_GEOREF+'.stl')
-        min_x = min_coords[0]
-        min_y = min_coords[1]
-        max_x = max_coords[0]
-        max_y = max_coords[1]
-        # Create GCP dictionary
-        GCP['min_x'] = min_x
-        GCP['min_y'] = min_y
-        GCP['max_x'] = max_x
-        GCP['max_y'] = max_y
+    for wind_angles in WIND_DIRECTION:     
+        POST_DIR = POST_DIR + f'output{wind_angles}/'
+        if mpi_rank == 0:
+            if not os.path.exists(POST_DIR):
+                os.makedirs(POST_DIR)
+            if wind_angles != 0:
+                rotate_geometry(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_GEOREF+str(wind_angles)+'.stl', 'z', wind_angles)
+                STL_GEOREF = STL_GEOREF + str(wind_angles)
+                print(f'Rotated geometry to align with wind direction: {wind_angles} in file {STL_GEOREF}.stl')
+            GCP = {}
+            min_coords, max_coords = calculate_bounding_box(STL_DIR+STL_GEOREF+'.stl')
+            min_x = min_coords[0]
+            min_y = min_coords[1]
+            max_x = max_coords[0]
+            max_y = max_coords[1]
+            # Create GCP dictionary
+            GCP['min_x'] = min_x
+            GCP['min_y'] = min_y
+            GCP['max_x'] = max_x
+            GCP['max_y'] = max_y
+            
+            # Save GCP dictionary TO A CSV FILE
+            with open(POST_DIR+'GCP.csv', 'w', newline='') as csv_file:
+                writer = csv.writer(csv_file)
+                # Write the headers (keys)
+                writer.writerow(GCP.keys())
+                # Write the values
+                writer.writerow(GCP.values())           
+            # Generate a non-georeferenced STL file in the origin
+            move_stl_to_origin(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME+'.stl')
+            min_coords, max_coords = calculate_bounding_box(STL_DIR+STL_BASENAME+'.stl') # TO calculate the bounding box for the loop
+            min_x = min_coords[0]
+            min_y = min_coords[1]
+            max_x = max_coords[0]
+            max_y = max_coords[1]
+            x_length = int(np.ceil(max_x - min_x))
+            y_length = int(np.ceil(max_y - min_y))
+        # Broadcast x_length and y_length to all ranks
+        x_length = mpi_comm.bcast(x_length if mpi_rank == 0 else None, root=0)
+        y_length = mpi_comm.bcast(y_length if mpi_rank == 0 else None, root=0)
         
-        # Save GCP dictionary TO A CSV FILE
-        with open(POST_DIR+'GCP.csv', 'w', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-            # Write the headers (keys)
-            writer.writerow(GCP.keys())
-            # Write the values
-            writer.writerow(GCP.values())           
-        # Generate a non-georeferenced STL file in the origin
-        move_stl_to_origin(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME+'.stl')
-        mpi_comm.Barrier() 
-        
+        # Ensure all ranks wait until serial section is complete
+        mpi_comm.Barrier()
+        # x_length = 300
+        # y_length = 300
+        print(f'Domain size in x: {x_length} and y: {y_length}')
         n = 0
-        for i in range(-overlap,-D_LENGTH,-overlap):
-            for j in range(overlap,-D_LENGTH,-overlap):
+        for i in range(overlap,-y_length,-overlap):
+            for j in range(overlap,-x_length,-overlap):
                 STL_DISPLACEMENT=[j,i,0]
                 print(STL_DISPLACEMENT)
                 STL_BASENAME = re.sub(r'\.stl$', '', STL_BASENAME)
@@ -105,6 +121,7 @@ if __name__ == '__main__':
                 pyAlya.cr_info()
                 n += 1
         mpi_comm.Barrier()
-        for i in range(0,n):
-            append_UV_features(f"{POST_DIR}{STL_BASENAME}-{i}")
+        for k in range(n):
+            append_UV_features(f"{POST_DIR}{STL_BASENAME}-{k}")
+
             
