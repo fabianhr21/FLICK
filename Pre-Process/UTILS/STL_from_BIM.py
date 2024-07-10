@@ -3,11 +3,9 @@ import ifcopenshell.geom
 import re
 import trimesh
 import numpy as np
+import os
 
-def export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_path, output_stl_path, target_fraction=0.5):
-    # Load the IFC file
-    ifc_file = ifcopenshell.open(ifc_file_path)
-
+def export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_paths, output_stl_path, target_fraction=0.5):
     # Initialize the settings for the geometry processing
     settings = ifcopenshell.geom.settings()
     settings.set(settings.USE_WORLD_COORDS, True)
@@ -20,31 +18,40 @@ def export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_path, output
     all_faces = []
     vertex_offset = 0
 
-    # Loop through all IfcBuildingElementProxy entities
-    for proxy in ifc_file.by_type("IfcBuildingElementProxy"):
-        # Check if the name matches the pattern
-        if proxy.Name and pattern.match(proxy.Name):
-            # Get the geometry of the proxy
-            shape = ifcopenshell.geom.create_shape(settings, proxy)
-            geometry = shape.geometry
+    # Loop through all IFC files
+    for ifc_file_path in ifc_file_paths:
+        # Load the IFC file
+        ifc_file = ifcopenshell.open(ifc_file_path)
 
-            # Extract the vertices and faces from the geometry
-            vertices = np.array(geometry.verts)  # Convert to numpy array
-            faces = np.array(geometry.faces)
+        # Loop through all IfcBuildingElementProxy entities
+        for proxy in ifc_file.by_type("IfcBuildingElementProxy"):
+            try:
+                # Check if the name matches the pattern
+                if proxy.Name and pattern.match(proxy.Name):
+                    # Get the geometry of the proxy
+                    shape = ifcopenshell.geom.create_shape(settings, proxy)
+                    geometry = shape.geometry
 
-            if vertices.size == 0:
-                continue  # Skip if no vertices are found
+                    # Extract the vertices and faces from the geometry
+                    vertices = np.array(geometry.verts)  # Convert to numpy array
+                    faces = np.array(geometry.faces)
 
-            # Find the minimum z value to adjust vertices to z=0
-            min_z = np.min(vertices[2::3])  # Get the minimum z value from the vertices
+                    if vertices.size == 0:
+                        continue  # Skip if no vertices are found
 
-            # Adjust vertices to set the geometry on a z=0 plane
-            vertices[2::3] -= min_z
+                    # Find the minimum z value to adjust vertices to z=0
+                    min_z = np.min(vertices[2::3])  # Get the minimum z value from the vertices
 
-            # Append the vertices and faces to the combined lists
-            all_vertices.append(vertices.reshape(-1, 3))
-            all_faces.append(faces.reshape(-1, 3) + vertex_offset)
-            vertex_offset += vertices.size // 3
+                    # Adjust vertices to set the geometry on a z=0 plane
+                    vertices[2::3] -= min_z
+
+                    # Append the vertices and faces to the combined lists
+                    all_vertices.append(vertices.reshape(-1, 3))
+                    all_faces.append(faces.reshape(-1, 3) + vertex_offset)
+                    vertex_offset += vertices.size // 3
+            except Exception as e:
+                print(f"Failed to process proxy {proxy.GlobalId} in file {os.path.basename(ifc_file_path)}: {e}")
+                continue
 
     # Combine all vertices and faces into a single mesh
     if all_vertices:
@@ -58,9 +65,9 @@ def export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_path, output
         # Export the simplified mesh to STL
         simplified_mesh.export(output_stl_path)
     else:
-        print("No matching IfcBuildingElementProxy entities found.")
+        print("No matching IfcBuildingElementProxy entities found in the provided files.")
 
 # Usage example
-ifc_file_path = "/content/METCATBIM.ifc"
-output_stl_path = '/content/output_SHIFT.stl'
-export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_path, output_stl_path, target_fraction=0.5)
+ifc_file_paths = ["/content/left.ifc", "/content/right.ifc"]
+output_stl_path = '/content/combined_output_UPC.stl'
+export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_paths, output_stl_path, target_fraction=0.5)
