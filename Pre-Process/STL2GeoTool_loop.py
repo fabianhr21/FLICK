@@ -32,7 +32,7 @@ STL_DISPLACEMENT=[0,0,0.0]
 STEP_SIZE=128  #this is L/2 where L is the side of the square
 N_POINTS=256 #the point at the corner must be taken into account.
 p_overlap = 0.50
-overlap = int(N_POINTS*p_overlap)
+overlap = int(2*STEP_SIZE*p_overlap)
 # overlap = 80 # We will cut this part in the output
 # k_size = 200
 
