@@ -12,11 +12,11 @@ import matplotlib.pyplot as plt
 import os, h5py
 from Unet_model import UNet_wind
 
-DATASET_PATH='./Data/'
-OUTPUT_PATH='./Output/'
-DATA_SAMPLE_BASENAME=''
-MODEL_BASENAME='Wind-NN-2D-normalized-sigmoid'
-MODEL_LOADING_PATH='./Models/'
+DATASET_PATH='../Pre-Process/output/output0/'
+OUTPUT_PATH='./output/'
+DATA_SAMPLE_BASENAME='grid_of_cubes'
+MODEL_BASENAME= 'model' #'Wind-NN-2D-normalized-sigmoid'
+MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/WRF-NN/inference-script/Models/Wind-NN-2D-normalized-sigmoid/'
 # MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc021742/NEURAL_NETWORKS/wind-NN/vel-magnitude/Wind-NN-2D-scaled-ReLu/checkpoints/' #VMAG
 INPUT_FEAT=['MASK','HEGT','WDST'] #having a MASK distinguishing solid and fluid regions at the first position is mandatory.
 TARGET_FEAT=['U','V']
@@ -159,6 +159,9 @@ def load_input_sample(args,idx):
     return X_features, {'y':Y_features,'extra':E_features}
 
 if __name__ == '__main__':
+    
+    if not os.path.exists(OUTPUT_PATH):
+        os.makedirs(OUTPUT_PATH)
 
     args = get_args() 
     #model creation
@@ -168,9 +171,7 @@ if __name__ == '__main__':
     model=load_model(model,args)
 
     #data sample indices to load examples from the dataset
-    OUTPUT_PATH='/gpfs/scratch/bsc21/bsc084826/WRF-NN/inference-script/sigmoid/BIM/'
-    files_path = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/output_UPC' 
-    files = os.listdir(files_path)
+    files = os.listdir(DATASET_PATH)
     h5_files = [file for file in files if file.endswith('.h5')]
     sample_indices = [i for i in range(0,len(h5_files))]
 
@@ -181,7 +182,7 @@ if __name__ == '__main__':
         # file_path = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/UPC_nord/output/'
         # base_name = f'UPC_small_origin-{idx}-geodata.h5'
         x,y=load_input_sample(args,idx)
-        name = f"UPC-{idx}-"
+        name = f"{DATA_SAMPLE_BASENAME}-{idx}-"
 
         print("Printing model input fields")
         plot_field(x[0][0],name + 'MASK')  #Field 0 corresponds to MASK
