@@ -8,6 +8,7 @@ import os, re, glob, subprocess, numpy as np
 from geometry_utils import geometrical_magnitudes,save_scalarfield,plane_generation,calculate_bounding_box,append_UV_features,move_stl_to_origin,rotate_geometry
 import pyAlya
 from stl import mesh
+import shutil
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
@@ -15,11 +16,10 @@ mpi_size = mpi_comm.Get_size()
 
 # Folders & files
 ## Input a georeferenced STL file to obtain ground control points at the end
-STL_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/SENSORS_UPC/'
-STL_GEOREF = 'combined_output_UPC_geo'
-STL_BASENAME = 'combined_output_UPC'
-POST_DIR = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/SENSORS_UPC/'
-
+STL_DIR = '../'
+STL_BASENAME = 'grid_of_cubes'
+POST_DIR = './output/'
+###################################33
 # Generate a non-georeferenced STL file in the origin
 # move_stl_to_origin(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME+'.stl')
 STL_SCALE=1.0
@@ -41,6 +41,9 @@ if __name__ == '__main__':
     for wind_angles in WIND_DIRECTION:     
         POST_DIR = POST_DIR + f'output{wind_angles}/'
         if mpi_rank == 0:
+            if not os.path.exists(STL_DIR+STL_BASENAME+'_geo.stl'):
+                shutil.copy(STL_DIR+STL_BASENAME+'.stl', STL_DIR+STL_BASENAME+'_geo.stl')
+                STL_GEOREF = STL_BASENAME + '_geo'
             if not os.path.exists(POST_DIR):
                 os.makedirs(POST_DIR)
             if wind_angles != 0:
