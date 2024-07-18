@@ -43,7 +43,7 @@ if __name__ == '__main__':
         if mpi_rank == 0:
             if not os.path.exists(STL_DIR+STL_BASENAME+'_geo.stl'):
                 shutil.copy(STL_DIR+STL_BASENAME+'.stl', STL_DIR+STL_BASENAME+'_geo.stl')
-                STL_GEOREF = STL_BASENAME + '_geo'
+            STL_GEOREF = STL_BASENAME + '_geo'
             if not os.path.exists(POST_DIR):
                 os.makedirs(POST_DIR)
             if wind_angles != 0:
