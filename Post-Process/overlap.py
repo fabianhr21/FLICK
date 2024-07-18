@@ -102,6 +102,17 @@ def vel_magNdir(U, V,W=0):
     
     return VMAG, VDIR2D
 
+def remove_empty_lines(matrix):
+    if not np.any(matrix):
+        return np.array([[]])
+
+    first_non_zero_row = np.argmax(np.any(matrix != 0, axis=1))
+    matrix = matrix[first_non_zero_row:]
+    last_non_zero_col = np.max(np.nonzero(np.any(matrix != 0, axis=0))) + 1
+    matrix = matrix[:, :last_non_zero_col]
+
+    return matrix
+
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 if __name__ == '__main__':
@@ -113,20 +124,19 @@ if __name__ == '__main__':
     matrix_mask,_= read_output_files(DATASET_PATH, 'MASK')
     mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
 
-    cut_U = overlap_matrix_U[overlap*y_frames-overlap:, 65:768]
-    cut_V = overlap_matrix_V[overlap*y_frames-overlap:, 65:768]
-    mask_cut = mask[overlap*y_frames-overlap:, 65:768]
-    cutcut_U = cut_U[0:600,:]
-    cutcut_V = cut_V[0:600,:]
-    mask_cutcut = mask_cut[0:600,:]
-    VMAG,VDIR = vel_magNdir(cutcut_U, cutcut_V)
+    # Clean matrices
+    overlap_matrix_U = remove_empty_lines(overlap_matrix_U)
+    overlap_matrix_V = remove_empty_lines(overlap_matrix_V)
+    mask = remove_empty_lines(mask)
+    
+    VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
 
-    mask_multiply = mask_cutcut * VMAG
+    masked_matrix = mask * VMAG
+    
     # SAVE THE FINAL OUTPUT
     np.savetxt(output_dir + 'VMAG.csv', VMAG, delimiter=',')
-    np.savetxt(output_dir + 'Mask.csv', mask_cutcut, delimiter=',')
-    np.savetxt(output_dir + 'U.csv', cutcut_U, delimiter=',')
-    np.savetxt(output_dir + 'V.csv', cutcut_V, delimiter=',')
+    np.savetxt(output_dir + 'Mask.csv', mask, delimiter=',')
+    np.savetxt(output_dir + 'U.csv', overlap_matrix_U, delimiter=',')
+    np.savetxt(output_dir + 'V.csv', overlap_matrix_V, delimiter=',')
     save_matrix_as_image(VMAG, output_dir + 'VMAG.png')
-    save_matrix_as_image(mask_multiply, output_dir + 'VMAG_mask.png')
-
+    save_matrix_as_image(masked_matrix, output_dir + 'VMAG_mask.png')
