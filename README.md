@@ -17,3 +17,7 @@ In the Post-Process section, you can find scripts to scale wind velocity and vis
 # REQUIREMENTS
 To use these tools pyAlya library is mandatory, developed by the Barcelona Supercomputing Center. You can ask for access to Arnau Miró <arnau.mirojane@bsc.es>
 
+# USE
+To test the base case you need to batch the RUN_WORKFLOW script.
+Usage: sbatch ./RUN_WORKFLOW.sh stl_basename
+
