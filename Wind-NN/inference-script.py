@@ -38,6 +38,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
     ####DATASET PARAMETERS-------------------------------------------------------------------------------------------------------------------
     parser.add_argument('-dataset_path', default=DATASET_PATH, help='dataset folder name.')
+    parser.add_argument('-output_path', default=OUTPUT_PATH, help='output folder name')
     parser.add_argument('-data_sample_basename', default=DATA_SAMPLE_BASENAME, help='input dataset files base name')
     parser.add_argument('-model_basename', default=MODEL_BASENAME, help='model saving file base name')
     parser.add_argument('-model_loading_path', default=MODEL_LOADING_PATH, help='model weights loading path and name for inference and training restart')
@@ -159,11 +160,14 @@ def load_input_sample(args,idx):
     return X_features, {'y':Y_features,'extra':E_features}
 
 if __name__ == '__main__':
+    args = get_args()
+    DATA_SAMPLE_BASENAME=args.data_sample_basename
+    DATASET_PATH=args.dataset_path
+    OUTPUT_PATH=args.output_path
     
     if not os.path.exists(OUTPUT_PATH):
         os.makedirs(OUTPUT_PATH)
-
-    args = get_args() 
+ 
     #model creation
     model=UNet_wind(args)
 

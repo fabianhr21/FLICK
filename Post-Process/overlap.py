@@ -5,7 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from PIL import Image
-
+import argparse
 #### PARAMETERS FROM WIND-NN ####
 p_overlap = 0.5                     # Overlap percentage
 N_points = 256                      # Number of points in the output matrix
@@ -21,6 +21,24 @@ basename = 'grid_of_cubes'          # Basename of the output files
 x_factor = 1.5                      # Window weight in the x direction
 y_factor = 1.5                      # Window weight in the y direction
 ##################################
+
+def get_args():
+    parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
+    parser.add_argument('-dataset_path', default=DATASET_PATH, help='dataset folder name.')
+    parser.add_argument('-output_path', default=output_dir, help='output folder name')
+    parser.add_argument('-basename', default=basename, help='input dataset files base name')
+    parser.add_argument('-step_size', type=int, default=step, help='step size')
+    parser.add_argument('-n_points', type=int, default=N_points, help='number of points')
+    parser.add_argument('-overlap', type=int, default=overlap, help='overlap')
+    parser.add_argument('-y_frames', type=int, default=y_frames, help='number of frames in the y direction')
+    parser.add_argument('-x_frames', type=int, default=x_frames, help='number of frames in the x direction')
+    parser.add_argument('-y_dir', type=int, default=y_dir, help='number of points in the y direction')
+    parser.add_argument('-x_dir', type=int, default=x_dir, help='number of points in the x direction')
+    parser.add_argument('-x_factor', type=float, default=x_factor, help='window weight in the x direction')
+    parser.add_argument('-y_factor', type=float, default=y_factor, help='window weight in the y direction')
+    args, _ = parser.parse_known_args()
+    return args
+
 def save_matrix_as_image(matrix, output_file,colormap='magma'):
     # Normalize matrix values to 0-1
     normalized_matrix = (matrix - np.min(matrix)) / (np.max(matrix) - np.min(matrix))
@@ -113,9 +131,10 @@ def remove_empty_lines(matrix):
 
     return matrix
 
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
 if __name__ == '__main__':
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     matrix_U, matrix = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
     overlap_matrix_U = overlap_matrix(matrix_U, N_points, step, overlap, y_dir, x_frames,x_factor, y_factor)
     matrix_V, matrix = read_output_files(DATASET_PATH, 'VGT')

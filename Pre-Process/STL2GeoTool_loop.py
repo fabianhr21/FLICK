@@ -9,6 +9,7 @@ from geometry_utils import geometrical_magnitudes,save_scalarfield,plane_generat
 import pyAlya
 from stl import mesh
 import shutil
+import argparse
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
@@ -36,11 +37,33 @@ overlap = int(2*STEP_SIZE*p_overlap)
 # overlap = 80 # We will cut this part in the output
 # k_size = 200
 
+# Add arguments when calling the function
+def get_args():
+    parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
+    parser.add_argument('-dataset_path', default=STL_DIR, help='dataset folder name.')
+    parser.add_argument('-stl_basename', default=STL_BASENAME, help='input dataset files base name')
+    parser.add_argument('-output_path', default=POST_DIR, help='output folder name')
+    parser.add_argument('-step_size', type=int, default=STEP_SIZE, help='step size')
+    parser.add_argument('-n_points', type=int, default=N_POINTS, help='number of points')
+    parser.add_argument('-overlap', type=int, default=overlap, help='overlap')
+    parser.add_argument('-wind_direction', type=int, default=WIND_DIRECTION, help='wind direction')
+    args, _ = parser.parse_known_args()
+    return args
+
 #Generate plane mesh
 if __name__ == '__main__':
+    args = get_args()
+    STL_DIR = args.dataset_path
+    STL_BASENAME = args.stl_basename
+    POST_DIR = args.output_path
+    STEP_SIZE = args.step_size
+    N_POINTS = args.n_points
+    overlap = args.overlap
+    WIND_DIRECTION = args.wind_direction
+    
     for wind_angles in WIND_DIRECTION:     
         POST_DIR = POST_DIR + f'output{wind_angles}/'
-        if mpi_rank == 0:
+        if mpi_rank == 0:          
             if not os.path.exists(STL_DIR+STL_BASENAME+'_geo.stl'):
                 shutil.copy(STL_DIR+STL_BASENAME+'.stl', STL_DIR+STL_BASENAME+'_geo.stl')
             STL_GEOREF = STL_BASENAME + '_geo'
