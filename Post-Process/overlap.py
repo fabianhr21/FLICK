@@ -7,17 +7,19 @@ import re
 from PIL import Image
 
 #### PARAMETERS FROM WIND-NN ####
-p_overlap = 0.5
-N_points = 256
-step = int(p_overlap * N_points)
-overlap = N_points - step
-y_frames = 5
-x_frames = 5
-y_dir = y_frames * N_points
-x_dir = x_frames * N_points
-DATASET_PATH='../Wind-NN/output/'
-output_dir = './final_output/'
-basename = 'grid_of_cubes'
+p_overlap = 0.5                     # Overlap percentage
+N_points = 256                      # Number of points in the output matrix
+step = int(p_overlap * N_points)    # Number of overlapping points
+overlap = N_points - step           # Number of non-overlapping points
+y_frames = 5                        # Number of frames in the y direction
+x_frames = 5                        # Number of frames in the x direction
+y_dir = y_frames * N_points         # Number of points in the y direction
+x_dir = x_frames * N_points         # Number of points in the x direction
+DATASET_PATH='../Wind-NN/output/'   # Path to the output files
+output_dir = './final_output/'      # Path to save the final output
+basename = 'grid_of_cubes'          # Basename of the output files
+x_factor = 1.5                      # Window weight in the x direction
+y_factor = 1.5                      # Window weight in the y direction
 ##################################
 def save_matrix_as_image(matrix, output_file,colormap='magma'):
     # Normalize matrix values to 0-1
@@ -102,26 +104,29 @@ def vel_magNdir(U, V,W=0):
 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-x_factor = 1.5
-y_factor = 1.5
-matrix_U, matrix = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
-overlap_matrix_U = overlap_matrix(matrix_U, N_points, step, overlap, y_dir, x_frames,x_factor, y_factor)
-matrix_V, matrix = read_output_files(DATASET_PATH, 'VGT')
-overlap_matrix_V = overlap_matrix(matrix_V, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
-VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
-matrix_mask,_= read_output_files(DATASET_PATH, 'MASK')
-mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
+if __name__ == '__main__':
+    matrix_U, matrix = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
+    overlap_matrix_U = overlap_matrix(matrix_U, N_points, step, overlap, y_dir, x_frames,x_factor, y_factor)
+    matrix_V, matrix = read_output_files(DATASET_PATH, 'VGT')
+    overlap_matrix_V = overlap_matrix(matrix_V, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
+    VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
+    matrix_mask,_= read_output_files(DATASET_PATH, 'MASK')
+    mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
 
-cut_U = overlap_matrix_U[overlap*y_frames-overlap:, 65:768]
-cut_V = overlap_matrix_V[overlap*y_frames-overlap:, 65:768]
-mask_cut = mask[overlap*y_frames-overlap:, 65:768]
-cutcut_U = cut_U[0:600,:]
-cutcut_V = cut_V[0:600,:]
-mask_cutcut = mask_cut[0:600,:]
-VMAG,VDIR = vel_magNdir(cutcut_U, cutcut_V)
+    cut_U = overlap_matrix_U[overlap*y_frames-overlap:, 65:768]
+    cut_V = overlap_matrix_V[overlap*y_frames-overlap:, 65:768]
+    mask_cut = mask[overlap*y_frames-overlap:, 65:768]
+    cutcut_U = cut_U[0:600,:]
+    cutcut_V = cut_V[0:600,:]
+    mask_cutcut = mask_cut[0:600,:]
+    VMAG,VDIR = vel_magNdir(cutcut_U, cutcut_V)
 
-mask_multiply = mask_cutcut * VMAG
-# Save matrix as image
-save_matrix_as_image(VMAG, output_dir + 'VMAG.png')
-save_matrix_as_image(mask_multiply, output_dir + 'VMAG_mask.png')
+    mask_multiply = mask_cutcut * VMAG
+    # SAVE THE FINAL OUTPUT
+    np.savetxt(output_dir + 'VMAG.csv', VMAG, delimiter=',')
+    np.savetxt(output_dir + 'Mask.csv', mask_cutcut, delimiter=',')
+    np.savetxt(output_dir + 'U.csv', cutcut_U, delimiter=',')
+    np.savetxt(output_dir + 'V.csv', cutcut_V, delimiter=',')
+    save_matrix_as_image(VMAG, output_dir + 'VMAG.png')
+    save_matrix_as_image(mask_multiply, output_dir + 'VMAG_mask.png')
 
