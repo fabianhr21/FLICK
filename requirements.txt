@@ -7,6 +7,5 @@ nfft
 h5py
 matplotlib
 pandas
-math
-python-stl
+numpy-stl
 ifcopenshell
