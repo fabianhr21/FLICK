@@ -9,12 +9,8 @@ import argparse
 #### PARAMETERS FROM WIND-NN ####
 p_overlap = 0.5                     # Overlap percentage
 N_points = 256                      # Number of points in the output matrix
-step = int(p_overlap * N_points)    # Number of overlapping points
-overlap = N_points - step           # Number of non-overlapping points
 y_frames = 5                        # Number of frames in the y direction
 x_frames = 5                        # Number of frames in the x direction
-y_dir = y_frames * N_points         # Number of points in the y direction
-x_dir = x_frames * N_points         # Number of points in the x direction
 DATASET_PATH='../Wind-NN/output/'   # Path to the output files
 output_dir = './final_output/'      # Path to save the final output
 basename = 'grid_of_cubes'          # Basename of the output files
@@ -24,16 +20,13 @@ y_factor = 1.5                      # Window weight in the y direction
 
 def get_args():
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
-    parser.add_argument('-dataset_path', default=DATASET_PATH, help='dataset folder name.')
-    parser.add_argument('-output_path', default=output_dir, help='output folder name')
-    parser.add_argument('-basename', default=basename, help='input dataset files base name')
-    parser.add_argument('-step_size', type=int, default=step, help='step size')
-    parser.add_argument('-n_points', type=int, default=N_points, help='number of points')
-    parser.add_argument('-overlap', type=int, default=overlap, help='overlap')
+    parser.add_argument('-overlap', type=float, default=p_overlap, help='overlap percentage')
+    parser.add_argument('-N_points', type=int, default=N_points, help='number of points in the output matrix')
     parser.add_argument('-y_frames', type=int, default=y_frames, help='number of frames in the y direction')
     parser.add_argument('-x_frames', type=int, default=x_frames, help='number of frames in the x direction')
-    parser.add_argument('-y_dir', type=int, default=y_dir, help='number of points in the y direction')
-    parser.add_argument('-x_dir', type=int, default=x_dir, help='number of points in the x direction')
+    parser.add_argument('-dataset_path', default=DATASET_PATH, help='dataset folder name.')
+    parser.add_argument('-output_dir', default=output_dir, help='output folder name')
+    parser.add_argument('-basename', default=basename, help='output files basename')
     parser.add_argument('-x_factor', type=float, default=x_factor, help='window weight in the x direction')
     parser.add_argument('-y_factor', type=float, default=y_factor, help='window weight in the y direction')
     args, _ = parser.parse_known_args()
@@ -132,6 +125,28 @@ def remove_empty_lines(matrix):
     return matrix
 
 if __name__ == '__main__':
+    args = get_args()
+    p_overlap = args.overlap
+    N_points = args.N_points
+    y_frames = args.y_frames
+    x_frames = args.x_frames
+    DATASET_PATH = args.dataset_path
+    output_dir = args.output_dir
+    basename = args.basename
+    x_factor = args.x_factor
+    y_factor = args.y_factor
+    
+    step = int(p_overlap * N_points)    # Number of overlapping points
+    overlap = N_points - step           # Number of non-overlapping points
+    y_dir = y_frames * N_points         # Number of points in the y direction
+    x_dir = x_frames * N_points         # Number of points in the x direction
+    
+    # Count files in the DATASET_PATH directory
+    files = os.listdir(DATASET_PATH)
+    h5_files = [file for file in files if file.endswith('MASK_matrix.csv')]
+    N_files = len(h5_files)
+    x_frames = np.sqrt(N_files).astype(int)
+    y_frames = np.sqrt(N_files).astype(int)
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
