@@ -20,7 +20,7 @@ mpi_size = mpi_comm.Get_size()
 ## Input a georeferenced STL file to obtain ground control points at the end
 STL_DIR = '../'
 STL_BASENAME = 'grid_of_cubes'
-POST_DIR = './output/'
+POST_DIR_MAIN = './output/'
 ###################################33
 # Generate a non-georeferenced STL file in the origin
 # move_stl_to_origin(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME+'.stl')
@@ -28,7 +28,7 @@ STL_SCALE=1.0
 DIST_RESOLUTION=1.0
 
 # Parameters
-WIND_DIRECTION = [0] # Rotates geometry to align with wind direction
+WIND_DIRECTION = [0,90] # Rotates geometry to align with wind direction
 STL_ROT_ANGLE=[0.0,0.0,0.0]
 STL_DISPLACEMENT=[0,0,0.0]
 STEP_SIZE=128  #this is L/2 where L is the side of the square
@@ -41,7 +41,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
     parser.add_argument('-dataset_path', default=STL_DIR, help='dataset folder name.')
     parser.add_argument('-stl_basename', default=STL_BASENAME, help='input dataset files base name')
-    parser.add_argument('-output_path', default=POST_DIR, help='output folder name')
+    parser.add_argument('-output_path', default=POST_DIR_MAIN, help='output folder name')
     parser.add_argument('-step_size', type=int, default=STEP_SIZE, help='step size')
     parser.add_argument('-n_points', type=int, default=N_POINTS, help='number of points')
     parser.add_argument('-p_overlap', type=int, default=p_overlap, help='overlap')
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     args = get_args()
     STL_DIR = args.dataset_path
     STL_BASENAME = args.stl_basename
-    POST_DIR = args.output_path
+    POST_DIR_MAIN = args.output_path
     STEP_SIZE = args.step_size
     N_POINTS = args.n_points
     WIND_DIRECTION = args.wind_direction
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     overlap = int(2*STEP_SIZE*p_overlap)
     
     for wind_angles in WIND_DIRECTION:     
-        POST_DIR = POST_DIR + f'output{wind_angles}-{STL_BASENAME}/'
+        POST_DIR = POST_DIR_MAIN + f'output{wind_angles}-{STL_BASENAME}/'
         if mpi_rank == 0:          
             if not os.path.exists(STL_DIR+STL_BASENAME+'_geo.stl'):
                 shutil.copy(STL_DIR+STL_BASENAME+'.stl', STL_DIR+STL_BASENAME+'_geo.stl')
@@ -71,8 +71,8 @@ if __name__ == '__main__':
             if not os.path.exists(POST_DIR):
                 os.makedirs(POST_DIR)
             if wind_angles != 0:
-                rotate_geometry(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_GEOREF+str(wind_angles)+'.stl', 'z', wind_angles)
-                STL_GEOREF = STL_GEOREF + str(wind_angles)
+                rotate_geometry(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME, wind_angles)
+                STL_GEOREF = STL_BASENAME + f'{str(wind_angles)}_geo'
                 print(f'Rotated geometry to align with wind direction: {wind_angles} in file {STL_GEOREF}.stl')
             GCP = {}
             min_coords, max_coords = calculate_bounding_box(STL_DIR+STL_GEOREF+'.stl')
@@ -156,6 +156,11 @@ if __name__ == '__main__':
         with open('global_vars.txt', 'w') as f:
             f.write(f"x_frames={x_frames}\n")
             f.write(f"y_frames={y_frames}\n")
-        for k in range(n):
+    for k in range(n):
+        try:
             append_UV_features(f"{POST_DIR}{STL_BASENAME}-{k}")
-            
+        except Exception as e:
+            print(f"Error in append_UV_features for {POST_DIR}{STL_BASENAME}-{k}: {e}")
+            # Optionally log the error to a file or take other actions
+            with open('error_log.txt', 'a') as error_log:
+                error_log.write(f"Error in append_UV_features for {POST_DIR}{STL_BASENAME}-{k}: {e}\n")

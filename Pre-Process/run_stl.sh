@@ -2,7 +2,7 @@
 #SBATCH --job-name=STL2GEO
 #SBATCH --output=STL2GEO_%j.out
 #SBATCH --error=STL2GEO_%j.err
-#SBATCH --ntasks=12
+#SBATCH --ntasks=224
 #SBATCH --time=02:00:00
 #SBATCH --qos=gp_debug
 #SBATCH --account=bsc21

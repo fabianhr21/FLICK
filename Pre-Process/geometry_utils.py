@@ -309,42 +309,43 @@ def move_stl_to_origin(stl_file, output_file):
     original_mesh.save(output_file)
     print(f'Saved translated STL file to: {output_file}')
     
-def create_rotation_matrix(axis, angle):
-    axis = np.asarray(axis)
-    axis = axis / np.sqrt(np.dot(axis, axis))
-    a = np.cos(angle / 2.0)
-    b, c, d = -axis * np.sin(angle / 2.0)
-    aa, bb, cc, dd = a * a, b * b, c * c, d * d
-    bc, ad, ac, ab, bd, cd = b * c, a * d, a * c, a * b, b * d, c * d
-    return np.array([[aa + bb - cc - dd, 2 * (bc + ad), 2 * (bd - ac)],
-                     [2 * (bc - ad), aa + cc - bb - dd, 2 * (cd + ab)],
-                     [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
-def rotate_geometry(input_filename, output_filename, axis, angle_list):
-        # Select the rotation matrix based on the chosen axis
-    if axis == 'x':
-        axis = [1,0,0]
-    elif axis == 'y':
-        axis = [0,1,0]
-    elif axis == 'z':
-        axis = [0,0,1]
-    else:
-        raise ValueError("Axis must be 'x', 'y', or 'z'")
-    # Load the STL file
-    stl_mesh = mesh.Mesh.from_file(input_filename)
-    # Calculate the bounding box center
-    min_coords = np.min(stl_mesh.vectors, axis=(0, 1))
-    max_coords = np.max(stl_mesh.vectors, axis=(0, 1))
-    center = (min_coords + max_coords) / 2
-    # Translate vertices to the origin
-    stl_mesh.vectors -= center
+def compute_bounding_box_center(stl_mesh):
+    """
+    Compute the center of the bounding box for the given mesh.
+    """
+    min_bound = np.min(stl_mesh.vectors, axis=(0, 1))
+    max_bound = np.max(stl_mesh.vectors, axis=(0, 1))
+    center = (min_bound + max_bound) / 2
+    return center
+
+def rotation_matrix_around_z(theta):
+    angle = theta - 270
+    theta = np.radians(angle)
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    return np.array([
+        [cos_theta, -sin_theta, 0],
+        [sin_theta, cos_theta, 0],
+        [0, 0, 1]
+    ])
+    
+def rotate_geometry(stl_path, output_path, angle):
+        # Load the STL file
+    original_mesh = mesh.Mesh.from_file(stl_path)
+    
+    # Compute the center of the bounding box
+    center = compute_bounding_box_center(original_mesh)
+
     # Create the rotation matrix
-    for angle in angle_list:   
-        angle_rad = np.radians(angle)
-        rotation_matrix = create_rotation_matrix(axis, angle_rad)
-        # Rotate the vertices
-        stl_mesh.vectors = np.dot(stl_mesh.vectors.reshape(-1, 3), rotation_matrix.T).reshape(-1, 3, 3)
-        # Translate vertices back to the original position
-        stl_mesh.vectors += center
-        # Save the rotated STL file
-        stl_mesh.save(output_filename+str(angle)+'.stl')
+    rotation_matrix = rotation_matrix_around_z(angle)
+    # Translate mesh to the origin (subtract the center)
+    original_mesh.vectors -= center
+    
+    # Apply the rotation matrix
+    original_mesh.vectors = np.dot(original_mesh.vectors, rotation_matrix.T)
+
+    # Translate mesh back to the original center (add the center)
+    original_mesh.vectors += center       
+    # Save the rotated mesh to a new file
+    original_mesh.save(output_path + f'{angle}.stl')

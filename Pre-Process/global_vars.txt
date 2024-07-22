@@ -1,0 +1,2 @@
+x_frames=5
+y_frames=5
