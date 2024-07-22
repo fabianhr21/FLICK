@@ -72,7 +72,10 @@ if __name__ == '__main__':
                 os.makedirs(POST_DIR)
             if wind_angles != 0:
                 rotate_geometry(STL_DIR+STL_GEOREF+'.stl', STL_DIR+STL_BASENAME, wind_angles)
-                STL_GEOREF = STL_BASENAME + f'{str(wind_angles)}_geo'
+                STL_BASENAME = STL_BASENAME + f'{str(wind_angles)}'
+                if not os.path.exists(STL_DIR+STL_BASENAME+'_geo.stl'):
+                    shutil.copy(STL_DIR+STL_BASENAME+'.stl', STL_DIR+STL_BASENAME+'_geo.stl')
+                STL_GEOREF = STL_BASENAME + f'_geo'
                 print(f'Rotated geometry to align with wind direction: {wind_angles} in file {STL_GEOREF}.stl')
             GCP = {}
             min_coords, max_coords = calculate_bounding_box(STL_DIR+STL_GEOREF+'.stl')
