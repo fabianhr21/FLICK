@@ -11,7 +11,6 @@ import pyAlya
 from stl import mesh
 import shutil
 import argparse
-import global_vars
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()

@@ -9,7 +9,6 @@ import argparse
 import sys
 sys.path.append('../Pre-Process/')
 import STL2GeoTool_loop
-import global_vars
 
 #### PARAMETERS FROM WIND-NN ####
 p_overlap = 0.5                     # Overlap percentage
