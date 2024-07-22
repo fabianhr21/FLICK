@@ -1,7 +1,4 @@
-#!/bin/env python
-#
-# model inference script
-
+# inference-script.py
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
@@ -11,9 +8,11 @@ import argparse
 import matplotlib.pyplot as plt
 import os, h5py
 from Unet_model import UNet_wind
+import sys
+sys.path.append('../Pre-Process/')
+import STL2GeoTool_loop
 
-DATASET_PATH='../Pre-Process/output/output0/'
-OUTPUT_PATH='./output/'
+DATASET_PATH='../Pre-Process/output/'
 DATA_SAMPLE_BASENAME='grid_of_cubes'
 MODEL_BASENAME= 'model' #'Wind-NN-2D-normalized-sigmoid'
 MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/WRF-NN/inference-script/Models/Wind-NN-2D-normalized-sigmoid/'
@@ -160,50 +159,51 @@ def load_input_sample(args,idx):
     return X_features, {'y':Y_features,'extra':E_features}
 
 if __name__ == '__main__':
-    args = get_args()
-    DATA_SAMPLE_BASENAME=args.data_sample_basename
-    DATASET_PATH=args.dataset_path
-    OUTPUT_PATH=args.output_path
+    for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
+        DATASET_PATH=DATASET_PATH + f'output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
+        OUTPUT_PATH=f'./output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
+        args = get_args()
+        
+        
+        if not os.path.exists(OUTPUT_PATH):
+            os.makedirs(OUTPUT_PATH)
     
-    if not os.path.exists(OUTPUT_PATH):
-        os.makedirs(OUTPUT_PATH)
- 
-    #model creation
-    model=UNet_wind(args)
+        #model creation
+        model=UNet_wind(args)
 
-    #trained model weights loading
-    model=load_model(model,args)
+        #trained model weights loading
+        model=load_model(model,args)
 
-    #data sample indices to load examples from the dataset
-    files = os.listdir(DATASET_PATH)
-    h5_files = [file for file in files if file.endswith('.h5')]
-    sample_indices = [i for i in range(0,len(h5_files))]
+        #data sample indices to load examples from the dataset
+        files = os.listdir(DATASET_PATH)
+        h5_files = [file for file in files if file.endswith('.h5')]
+        sample_indices = [i for i in range(0,len(h5_files))]
 
-    for idx in sample_indices:
-        #loading data sample. x corresponds to the model input fields (MASK,HEGT,WDST) while y corresponds to the output groundtruth fields (U,V). 
-        # x,y=load_input_sample(args,idx)
-        # file_path = f"{path}/{h5_files[idx]}"
-        # file_path = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/UPC_nord/output/'
-        # base_name = f'UPC_small_origin-{idx}-geodata.h5'
-        x,y=load_input_sample(args,idx)
-        name = f"{DATA_SAMPLE_BASENAME}-{idx}-"
+        for idx in sample_indices:
+            #loading data sample. x corresponds to the model input fields (MASK,HEGT,WDST) while y corresponds to the output groundtruth fields (U,V). 
+            # x,y=load_input_sample(args,idx)
+            # file_path = f"{path}/{h5_files[idx]}"
+            # file_path = '/gpfs/scratch/bsc21/bsc084826/WRF-NN/UPC_nord/output/'
+            # base_name = f'UPC_small_origin-{idx}-geodata.h5'
+            x,y=load_input_sample(args,idx)
+            name = f"{DATA_SAMPLE_BASENAME}-{idx}-"
 
-        print("Printing model input fields")
-        # plot_field(x[0][0],name + 'MASK')  #Field 0 corresponds to MASK
-        np.savetxt(OUTPUT_PATH + name + 'MASK_matrix.csv', x[0][0].numpy(), delimiter=',')
-        # plot_field(x[0][1],name+'HEGT')  #Field 1 corresponds to building height HEGT
-        # plot_field(x[0][2],'WDST')  #Field 2 corresponds to distance to nearest wall WDST
+            print("Printing model input fields")
+            # plot_field(x[0][0],name + 'MASK')  #Field 0 corresponds to MASK
+            np.savetxt(OUTPUT_PATH + name + 'MASK_matrix.csv', x[0][0].numpy(), delimiter=',')
+            # plot_field(x[0][1],name+'HEGT')  #Field 1 corresponds to building height HEGT
+            # plot_field(x[0][2],'WDST')  #Field 2 corresponds to distance to nearest wall WDST
 
-        print("Evaluating model")
-        with torch.no_grad():
-            ypred=model(x.float())
+            print("Evaluating model")
+            with torch.no_grad():
+                ypred=model(x.float())
 
-        print("Printing model output groundtruth and model predictions")    
-        # y is groundtruth and ypred is the model prediciton.
-        # plot_field(y[0][0],'UGT')      #Field 0 corresponds to U velocity component.
+            print("Printing model output groundtruth and model predictions")    
+            # y is groundtruth and ypred is the model prediciton.
+            # plot_field(y[0][0],'UGT')      #Field 0 corresponds to U velocity component.
 
-        # plot_field(ypred[0][0], name +'VMAG')
-        np.savetxt(OUTPUT_PATH + name + 'UGT_matrix.csv', ypred[0][0].numpy(), delimiter=',')
-        # plot_field(y[0][1],'VGT')      #Field 1 corresponds to V veloctiy component.
-        np.savetxt(OUTPUT_PATH + name + 'VGT_matrix.csv', ypred[0][1].numpy(), delimiter=',') 
-        # plot_field(ypred[0][1],name+'VPRED')
+            # plot_field(ypred[0][0], name +'VMAG')
+            np.savetxt(OUTPUT_PATH + name + 'UGT_matrix.csv', ypred[0][0].numpy(), delimiter=',')
+            # plot_field(y[0][1],'VGT')      #Field 1 corresponds to V veloctiy component.
+            np.savetxt(OUTPUT_PATH + name + 'VGT_matrix.csv', ypred[0][1].numpy(), delimiter=',') 
+            # plot_field(ypred[0][1],name+'VPRED')

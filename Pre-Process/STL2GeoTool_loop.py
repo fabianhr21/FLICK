@@ -1,3 +1,4 @@
+# STL2GeoTool_loop.py
 from __future__ import print_function, division
 
 import mpi4py 
@@ -10,6 +11,7 @@ import pyAlya
 from stl import mesh
 import shutil
 import argparse
+import global_vars
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
@@ -34,9 +36,7 @@ STEP_SIZE=128  #this is L/2 where L is the side of the square
 N_POINTS=256 #the point at the corner must be taken into account.
 p_overlap = 0.50
 overlap = int(2*STEP_SIZE*p_overlap)
-# overlap = 80 # We will cut this part in the output
-# k_size = 200
-
+#############################################
 # Add arguments when calling the function
 def get_args():
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
@@ -45,7 +45,7 @@ def get_args():
     parser.add_argument('-output_path', default=POST_DIR, help='output folder name')
     parser.add_argument('-step_size', type=int, default=STEP_SIZE, help='step size')
     parser.add_argument('-n_points', type=int, default=N_POINTS, help='number of points')
-    parser.add_argument('-overlap', type=int, default=overlap, help='overlap')
+    parser.add_argument('-p_overlap', type=int, default=p_overlap, help='overlap')
     parser.add_argument('-wind_direction', type=int, default=WIND_DIRECTION, help='wind direction')
     args, _ = parser.parse_known_args()
     return args
@@ -58,11 +58,13 @@ if __name__ == '__main__':
     POST_DIR = args.output_path
     STEP_SIZE = args.step_size
     N_POINTS = args.n_points
-    overlap = args.overlap
     WIND_DIRECTION = args.wind_direction
+    p_overlap = args.p_overlap
+    
+    overlap = int(2*STEP_SIZE*p_overlap)
     
     for wind_angles in WIND_DIRECTION:     
-        POST_DIR = POST_DIR + f'output{wind_angles}/'
+        POST_DIR = POST_DIR + f'output{wind_angles}-{STL_BASENAME}/'
         if mpi_rank == 0:          
             if not os.path.exists(STL_DIR+STL_BASENAME+'_geo.stl'):
                 shutil.copy(STL_DIR+STL_BASENAME+'.stl', STL_DIR+STL_BASENAME+'_geo.stl')
@@ -111,7 +113,10 @@ if __name__ == '__main__':
         # y_length = 300
         print(f'Domain size in x: {x_length} and y: {y_length}')
         n = 0
+        x_frames = 0
+        y_frames = 0
         for i in range(overlap,-y_length,-overlap):
+            y_frames += 1
             for j in range(overlap,-x_length,-overlap):
                 STL_DISPLACEMENT=[j,i,0]
                 print(STL_DISPLACEMENT)
@@ -146,8 +151,12 @@ if __name__ == '__main__':
                 pyAlya.pprint(0,'Done.',flush=True)
                 pyAlya.cr_info()
                 n += 1
+            x_frames += 1
         mpi_comm.Barrier()
+        # Save x_frames and y_frames to a txt
+        with open('global_vars.txt', 'w') as f:
+            f.write(f"x_frames={x_frames}\n")
+            f.write(f"y_frames={y_frames}\n")
         for k in range(n):
             append_UV_features(f"{POST_DIR}{STL_BASENAME}-{k}")
-
             

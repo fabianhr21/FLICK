@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 import re
 from PIL import Image
 import argparse
+import sys
+sys.path.append('../Pre-Process/')
+import STL2GeoTool_loop
+import global_vars
+
 #### PARAMETERS FROM WIND-NN ####
 p_overlap = 0.5                     # Overlap percentage
 N_points = 256                      # Number of points in the output matrix
@@ -124,53 +129,70 @@ def remove_empty_lines(matrix):
 
     return matrix
 
+
+def read_global_vars():
+    global_vars = {}
+    with open('../Pre-Process/global_vars.txt', 'r') as f:
+        for line in f:
+            name, value = line.strip().split('=')
+            global_vars[name] = int(value)
+    return global_vars
+
+
 if __name__ == '__main__':
-    args = get_args()
-    p_overlap = args.overlap
-    N_points = args.N_points
-    y_frames = args.y_frames
-    x_frames = args.x_frames
-    DATASET_PATH = args.dataset_path
-    output_dir = args.output_dir
-    basename = args.basename
-    x_factor = args.x_factor
-    y_factor = args.y_factor
-    
-    step = int(p_overlap * N_points)    # Number of overlapping points
-    overlap = N_points - step           # Number of non-overlapping points
-    y_dir = y_frames * N_points         # Number of points in the y direction
-    x_dir = x_frames * N_points         # Number of points in the x direction
-    
-    # Count files in the DATASET_PATH directory
-    files = os.listdir(DATASET_PATH)
-    h5_files = [file for file in files if file.endswith('MASK_matrix.csv')]
-    N_files = len(h5_files)
-    x_frames = np.sqrt(N_files).astype(int)
-    y_frames = np.sqrt(N_files).astype(int)
-    
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    matrix_U, matrix = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
-    overlap_matrix_U = overlap_matrix(matrix_U, N_points, step, overlap, y_dir, x_frames,x_factor, y_factor)
-    matrix_V, matrix = read_output_files(DATASET_PATH, 'VGT')
-    overlap_matrix_V = overlap_matrix(matrix_V, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
-    VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
-    matrix_mask,_= read_output_files(DATASET_PATH, 'MASK')
-    mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
+    x_frames, y_frames = read_global_vars().values()
+    for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
+        args = get_args()
+        N_points = args.N_points
+        DATASET_PATH = args.dataset_path
+        output_dir = args.output_dir
+        basename = args.basename
+        x_factor = args.x_factor
+        y_factor = args.y_factor
 
-    # Clean matrices
-    overlap_matrix_U = remove_empty_lines(overlap_matrix_U)
-    overlap_matrix_V = remove_empty_lines(overlap_matrix_V)
-    mask = remove_empty_lines(mask)
-    
-    VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
+        p_overlap = STL2GeoTool_loop.p_overlap
+        print(f'x_Frames: {x_frames}, y_Frames: {y_frames}')
+        print(f'Processing output{wind_angle}-{basename}...')
 
-    masked_matrix = mask * VMAG
-    
-    # SAVE THE FINAL OUTPUT
-    np.savetxt(output_dir + 'VMAG.csv', VMAG, delimiter=',')
-    np.savetxt(output_dir + 'Mask.csv', mask, delimiter=',')
-    np.savetxt(output_dir + 'U.csv', overlap_matrix_U, delimiter=',')
-    np.savetxt(output_dir + 'V.csv', overlap_matrix_V, delimiter=',')
-    save_matrix_as_image(VMAG, output_dir + 'VMAG.png')
-    save_matrix_as_image(masked_matrix, output_dir + 'VMAG_mask.png')
+        
+        step = int(p_overlap * N_points)    # Number of overlapping points
+        overlap = N_points - step           # Number of non-overlapping points
+        y_dir = y_frames * N_points         # Number of points in the y direction
+        x_dir = x_frames * N_points         # Number of points in the x direction
+        
+        output_dir = output_dir + f'output{wind_angle}-{basename}/'
+        DATASET_PATH = DATASET_PATH + f'output{wind_angle}-{basename}/' 
+        
+        # Count files in the DATASET_PATH directory
+        # files = os.listdir(DATASET_PATH)
+        # h5_files = [file for file in files if file.endswith('MASK_matrix.csv')]
+        # N_files = len(h5_files)
+        # x_frames = np.sqrt(N_files).astype(int)
+        # y_frames = np.sqrt(N_files).astype(int)
+        
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        matrix_U, matrix = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
+        overlap_matrix_U = overlap_matrix(matrix_U, N_points, step, overlap, y_dir, x_frames,x_factor, y_factor)
+        matrix_V, matrix = read_output_files(DATASET_PATH, 'VGT')
+        overlap_matrix_V = overlap_matrix(matrix_V, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
+        VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
+        matrix_mask,_= read_output_files(DATASET_PATH, 'MASK')
+        mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
+
+        # Clean matrices
+        overlap_matrix_U = remove_empty_lines(overlap_matrix_U)
+        overlap_matrix_V = remove_empty_lines(overlap_matrix_V)
+        mask = remove_empty_lines(mask)
+        
+        VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
+
+        masked_matrix = mask * VMAG
+        
+        # SAVE THE FINAL OUTPUT
+        np.savetxt(output_dir + 'VMAG.csv', VMAG, delimiter=',')
+        np.savetxt(output_dir + 'Mask.csv', mask, delimiter=',')
+        np.savetxt(output_dir + 'U.csv', overlap_matrix_U, delimiter=',')
+        np.savetxt(output_dir + 'V.csv', overlap_matrix_V, delimiter=',')
+        save_matrix_as_image(VMAG, output_dir + 'VMAG.png')
+        save_matrix_as_image(masked_matrix, output_dir + 'VMAG_mask.png')
