@@ -12,8 +12,10 @@ import sys
 sys.path.append('../Pre-Process/')
 import STL2GeoTool_loop
 
-DATASET_PATH='../Pre-Process/output/'
+wind_angle = 0
 DATA_SAMPLE_BASENAME='grid_of_cubes'
+DATASET_PATH='../Pre-Process/output/'
+OUTPUT_PATH='./output/'
 MODEL_BASENAME= 'model' #'Wind-NN-2D-normalized-sigmoid'
 MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/WRF-NN/inference-script/Models/Wind-NN-2D-normalized-sigmoid/'
 # MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc021742/NEURAL_NETWORKS/wind-NN/vel-magnitude/Wind-NN-2D-scaled-ReLu/checkpoints/' #VMAG
@@ -159,11 +161,14 @@ def load_input_sample(args,idx):
     return X_features, {'y':Y_features,'extra':E_features}
 
 if __name__ == '__main__':
-    for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
-        DATASET_PATH=DATASET_PATH + f'output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
+    for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:    
+        args = get_args()
+        DATA_SAMPLE_BASENAME = args.data_sample_basename
+        DATASET_PATH= f'../Pre-Process/output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
         OUTPUT_PATH=f'./output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
         args = get_args()
-        
+
+ 
         
         if not os.path.exists(OUTPUT_PATH):
             os.makedirs(OUTPUT_PATH)
