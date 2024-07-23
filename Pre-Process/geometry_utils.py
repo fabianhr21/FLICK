@@ -348,4 +348,5 @@ def rotate_geometry(stl_path, output_path, angle):
     # Translate mesh back to the original center (add the center)
     original_mesh.vectors += center       
     # Save the rotated mesh to a new file
-    original_mesh.save(output_path + f'{angle}.stl')
+    original_mesh.save(output_path + f'.stl')
+    print(f"Saved output to {output_path + f'.stl'} ")

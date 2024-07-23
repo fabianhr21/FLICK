@@ -67,13 +67,13 @@ def read_output_files(output_dir, keyword):
                 data = np.genfromtxt(f, delimiter=',')
                 matrix.append(data)
             f.close()
-    complete_matrix = np.zeros((y_dir, x_dir))
-    n = 0
-    for i in range(y_dir - N_points, -1, -N_points):
-        for j in range(0, x_dir, N_points):
-            complete_matrix[i:i + N_points, j:j + N_points] = matrix[n]
-            n += 1
-    return matrix, complete_matrix  # Complete matrix is the matrix with all the frames, only visualization purposes
+    # complete_matrix = np.zeros((y_dir, x_dir))
+    # n = 0
+    # for i in range(y_dir - N_points, -1, -N_points):
+    #     for j in range(0, x_dir, N_points):
+    #         complete_matrix[i:i + N_points, j:j + N_points] = matrix[n]
+    #         n += 1
+    return matrix #, complete_matrix  # Complete matrix is the matrix with all the frames, only visualization purposes
 
 def interpolate(matrix1, matrix2, overlap, axis, factor=1):
     # Generate the interpolation weights using an exponential decay function
@@ -129,9 +129,9 @@ def remove_empty_lines(matrix):
     return matrix
 
 
-def read_global_vars():
+def read_global_vars(DIR):
     global_vars = {}
-    with open('../Pre-Process/global_vars.txt', 'r') as f:
+    with open(DIR + 'global_vars.txt', 'r') as f:
         for line in f:
             name, value = line.strip().split('=')
             global_vars[name] = int(value)
@@ -139,7 +139,6 @@ def read_global_vars():
 
 
 if __name__ == '__main__':
-    x_frames, y_frames = read_global_vars().values()
     args = get_args()
     N_points = args.N_points
     DATASET_PATH = args.dataset_path
@@ -160,7 +159,13 @@ if __name__ == '__main__':
         
         output_dir = './final_output/' + f'output{wind_angle}-{basename}/'
         DATASET_PATH = '../Wind-NN/output/' + f'output{wind_angle}-{basename}/' 
+        # if wind_angle != 0:
+        #     basename = f'{basename}{str(wind_angle)}'
         args = get_args() 
+        print(f'Analyzing samples in {DATASET_PATH}..., saving output in {output_dir}, with basename {basename}')
+        GLOBAL_VAR_PATH= f'../Pre-Process/output/output{wind_angle}-{basename}/'
+        x_frames, y_frames = read_global_vars(GLOBAL_VAR_PATH).values()
+        print(f'x_Frames: {x_frames}, y_Frames: {y_frames}')
         # Count files in the DATASET_PATH directory
         # files = os.listdir(DATASET_PATH)
         # h5_files = [file for file in files if file.endswith('MASK_matrix.csv')]

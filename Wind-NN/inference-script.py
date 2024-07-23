@@ -165,10 +165,18 @@ if __name__ == '__main__':
     for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:    
         args = get_args()
         DATA_SAMPLE_BASENAME = args.data_sample_basename
+        print(f"DATA_SAMPLE_BASENAME: {DATA_SAMPLE_BASENAME}")
         DATASET_PATH= f'../Pre-Process/output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
         OUTPUT_PATH=f'./output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
+        
+        # if wind_angle != 0:
+        #     DATA_SAMPLE_BASENAME = f'{DATA_SAMPLE_BASENAME}{str(wind_angle)}'
+        
         args = get_args()
+        args.data_sample_basename = DATA_SAMPLE_BASENAME
+        
         print(f"DATASET_PATH: {DATASET_PATH}, OUTPUT_PATH: {OUTPUT_PATH}, DATA_SAMPLE_BASENAME: {DATA_SAMPLE_BASENAME},")
+        
 
  
         
