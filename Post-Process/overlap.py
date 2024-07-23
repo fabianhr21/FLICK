@@ -175,12 +175,12 @@ if __name__ == '__main__':
         
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        matrix_U, matrix = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
+        matrix_U = read_output_files(DATASET_PATH, 'UGT') # In the inference scripts the output writes 'UGT' or 'VGT' for U and V wind fields
         overlap_matrix_U = overlap_matrix(matrix_U, N_points, step, overlap, y_dir, x_frames,x_factor, y_factor)
-        matrix_V, matrix = read_output_files(DATASET_PATH, 'VGT')
+        matrix_V = read_output_files(DATASET_PATH, 'VGT')
         overlap_matrix_V = overlap_matrix(matrix_V, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
         VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
-        matrix_mask,_= read_output_files(DATASET_PATH, 'MASK')
+        matrix_mask= read_output_files(DATASET_PATH, 'MASK')
         mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
 
         # Clean matrices
