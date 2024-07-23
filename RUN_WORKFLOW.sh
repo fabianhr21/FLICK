@@ -19,6 +19,7 @@ BASENAME=$1
 # Run the Python script with srun
 cd Pre-Process
 srun python ./STL2GeoTool_loop.py -stl_basename "$BASENAME"
+srun -n 1 python ./ADD_FEAT.py -stl_basename "$BASENAME"
 cd ../Wind-NN
 srun -n 1 python inference-script.py -data_sample_basename "$BASENAME"
 cd ../Post-Process

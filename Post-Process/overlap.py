@@ -140,15 +140,14 @@ def read_global_vars():
 
 if __name__ == '__main__':
     x_frames, y_frames = read_global_vars().values()
+    args = get_args()
+    N_points = args.N_points
+    DATASET_PATH = args.dataset_path
+    output_dir = args.output_dir
+    basename = args.basename
+    x_factor = args.x_factor
+    y_factor = args.y_factor
     for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
-        args = get_args()
-        N_points = args.N_points
-        DATASET_PATH = args.dataset_path
-        output_dir = args.output_dir
-        basename = args.basename
-        x_factor = args.x_factor
-        y_factor = args.y_factor
-
         p_overlap = STL2GeoTool_loop.p_overlap
         print(f'x_Frames: {x_frames}, y_Frames: {y_frames}')
         print(f'Processing output{wind_angle}-{basename}...')
@@ -159,9 +158,9 @@ if __name__ == '__main__':
         y_dir = y_frames * N_points         # Number of points in the y direction
         x_dir = x_frames * N_points         # Number of points in the x direction
         
-        output_dir = output_dir + f'output{wind_angle}-{basename}/'
-        DATASET_PATH = DATASET_PATH + f'output{wind_angle}-{basename}/' 
-        
+        output_dir = './final_output/' + f'output{wind_angle}-{basename}/'
+        DATASET_PATH = '../Wind-NN/output/' + f'output{wind_angle}-{basename}/' 
+        args = get_args() 
         # Count files in the DATASET_PATH directory
         # files = os.listdir(DATASET_PATH)
         # h5_files = [file for file in files if file.endswith('MASK_matrix.csv')]

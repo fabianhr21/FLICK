@@ -28,7 +28,7 @@ STL_SCALE=1.0
 DIST_RESOLUTION=1.0
 
 # Parameters
-WIND_DIRECTION = [0] # Rotates geometry to align with wind direction
+WIND_DIRECTION = [0,90] # Rotates geometry to align with wind direction
 STL_ROT_ANGLE=[0.0,0.0,0.0]
 STL_DISPLACEMENT=[0,0,0.0]
 STEP_SIZE=128  #this is L/2 where L is the side of the square
@@ -155,10 +155,10 @@ if __name__ == '__main__':
                 n += 1
             x_frames += 1
         mpi_comm.Barrier()
-        if mpi_rank == 0:
-            for k in range(n):
-                append_UV_features(f"{POST_DIR}{STL_BASENAME}-{k}")
-                # Save x_frames and y_frames to a txt
+        # if mpi_rank == 0:
+        #     for k in range(n):
+        #         append_UV_features(f"{POST_DIR}{STL_BASENAME}-{k}")
+        #         # Save x_frames and y_frames to a txt
         with open('global_vars.txt', 'w') as f:
             f.write(f"x_frames={x_frames}\n")
             f.write(f"y_frames={y_frames}\n")

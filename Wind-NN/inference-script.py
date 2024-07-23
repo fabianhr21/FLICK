@@ -161,12 +161,14 @@ def load_input_sample(args,idx):
     return X_features, {'y':Y_features,'extra':E_features}
 
 if __name__ == '__main__':
+    
     for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:    
         args = get_args()
         DATA_SAMPLE_BASENAME = args.data_sample_basename
         DATASET_PATH= f'../Pre-Process/output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
         OUTPUT_PATH=f'./output/output{wind_angle}-{DATA_SAMPLE_BASENAME}/'
         args = get_args()
+        print(f"DATASET_PATH: {DATASET_PATH}, OUTPUT_PATH: {OUTPUT_PATH}, DATA_SAMPLE_BASENAME: {DATA_SAMPLE_BASENAME},")
 
  
         
