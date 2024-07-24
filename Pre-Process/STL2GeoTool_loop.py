@@ -25,7 +25,7 @@ STL_SCALE = 1.0
 DIST_RESOLUTION = 1.0
 
 # Parameters
-WIND_DIRECTION = [45, 90,187,26]  # Rotates geometry to align with wind direction
+WIND_DIRECTION = [45]  # Rotates geometry to align with wind direction (degrees)
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [0, 0, 0.0]
 STEP_SIZE = 128
@@ -109,6 +109,8 @@ if __name__ == '__main__':
         for i in range(overlap, -y_length, -overlap):
             y_frames += 1
             for j in range(overlap, -x_length, -overlap):
+                if i == 0:
+                    x_frames += 1
                 STL_DISPLACEMENT = [j, i, 0]
                 print(STL_DISPLACEMENT)
                 int_mesh = plane_generation(STEP_SIZE, N_POINTS, N_POINTS)
@@ -137,7 +139,6 @@ if __name__ == '__main__':
                 pyAlya.pprint(0, 'Done.', flush=True)
                 pyAlya.cr_info()
                 n += 1
-            x_frames += 1
         mpi_comm.Barrier()
 
         if mpi_rank == 0:

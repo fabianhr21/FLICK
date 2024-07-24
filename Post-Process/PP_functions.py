@@ -4,6 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from PIL import Image
+import sys
+sys.path.append('../../Pre-Process/')
+import STL2GeoTool_loop
 
 def save_matrix_as_image(matrix, output_file,colormap='magma'):
     # Normalize matrix values to 0-1

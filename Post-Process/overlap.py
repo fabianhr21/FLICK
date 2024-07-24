@@ -148,14 +148,7 @@ if __name__ == '__main__':
     y_factor = args.y_factor
     for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
         p_overlap = STL2GeoTool_loop.p_overlap
-        print(f'x_Frames: {x_frames}, y_Frames: {y_frames}')
         print(f'Processing output{wind_angle}-{basename}...')
-
-        
-        step = int(p_overlap * N_points)    # Number of overlapping points
-        overlap = N_points - step           # Number of non-overlapping points
-        y_dir = y_frames * N_points         # Number of points in the y direction
-        x_dir = x_frames * N_points         # Number of points in the x direction
         
         output_dir = './final_output/' + f'output{wind_angle}-{basename}/'
         DATASET_PATH = '../Wind-NN/output/' + f'output{wind_angle}-{basename}/' 
@@ -166,12 +159,10 @@ if __name__ == '__main__':
         GLOBAL_VAR_PATH= f'../Pre-Process/output/output{wind_angle}-{basename}/'
         x_frames, y_frames = read_global_vars(GLOBAL_VAR_PATH).values()
         print(f'x_Frames: {x_frames}, y_Frames: {y_frames}')
-        # Count files in the DATASET_PATH directory
-        # files = os.listdir(DATASET_PATH)
-        # h5_files = [file for file in files if file.endswith('MASK_matrix.csv')]
-        # N_files = len(h5_files)
-        # x_frames = np.sqrt(N_files).astype(int)
-        # y_frames = np.sqrt(N_files).astype(int)
+        step = int(p_overlap * N_points)    # Number of overlapping points
+        overlap = N_points - step           # Number of non-overlapping points
+        y_dir = y_frames * N_points         # Number of points in the y direction
+        x_dir = x_frames * N_points         # Number of points in the x direction
         
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -182,7 +173,6 @@ if __name__ == '__main__':
         VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
         matrix_mask= read_output_files(DATASET_PATH, 'MASK')
         mask = overlap_matrix(matrix_mask, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor)
-
         # Clean matrices
         overlap_matrix_U = remove_empty_lines(overlap_matrix_U)
         overlap_matrix_V = remove_empty_lines(overlap_matrix_V)
