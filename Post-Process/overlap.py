@@ -51,6 +51,17 @@ def save_matrix_as_image(matrix, output_file,colormap='magma'):
     image.save(output_file)
     print(f"Image saved as {output_file}")
 
+def save_image(field, output_file, colormap='magma'):
+        plt.figure(figsize=(10, 10))
+        plt.imshow(field,cmap='magma')
+        plt.colorbar()
+        plt.title('Wind Speed (m/s)')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.show()
+        plt.savefig(output_file)
+        plt.close()
+
 def extract_upc_number(filename):
     match = re.search(r'-(\d+)', filename)
     if match:
@@ -179,8 +190,8 @@ if __name__ == '__main__':
         mask = remove_empty_lines(mask)
         
         VMAG,VDIR = vel_magNdir(overlap_matrix_U, overlap_matrix_V)
-
-        masked_matrix = mask * VMAG
+        
+        # masked_matrix = mask * VMAG
         
         # SAVE THE FINAL OUTPUT
         np.savetxt(output_dir + 'VMAG.csv', VMAG, delimiter=',')
@@ -188,4 +199,5 @@ if __name__ == '__main__':
         np.savetxt(output_dir + 'U.csv', overlap_matrix_U, delimiter=',')
         np.savetxt(output_dir + 'V.csv', overlap_matrix_V, delimiter=',')
         save_matrix_as_image(VMAG, output_dir + 'VMAG.png')
-        save_matrix_as_image(masked_matrix, output_dir + 'VMAG_mask.png')
+        save_image(VMAG, output_dir+'VMAG_label.png')
+        # save_matrix_as_image(masked_matrix, output_dir + 'VMAG_mask.png')

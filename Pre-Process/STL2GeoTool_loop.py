@@ -25,7 +25,8 @@ STL_SCALE = 1.0
 DIST_RESOLUTION = 1.0
 
 # Parameters
-WIND_DIRECTION = [45]  # Rotates geometry to align with wind direction (degrees)
+# WIND_DIRECTION =  [209.37, 194.43, 195.01, 187.04, 177.39, 194.31, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
+WIND_DIRECTION = [0,90,180,270]
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [0, 0, 0.0]
 STEP_SIZE = 128
@@ -67,17 +68,18 @@ if __name__ == '__main__':
             shutil.copy(STL_DIR + STL_BASENAME + '.stl', POST_DIR + STL_BASENAME + '_geo.stl')
             shutil.copy(STL_DIR + STL_BASENAME + '.stl', POST_DIR + STL_BASENAME + '.stl')
             STL_GEOREF = STL_BASENAME + '_geo'
-            if wind_angle != 0:
-                rotate_geometry(POST_DIR + STL_BASENAME + '.stl', POST_DIR + STL_BASENAME, wind_angle)
-                rotated_stl_basename = STL_BASENAME
-                print(rotated_stl_basename)
-                print(f'Rotated geometry to align with wind direction: {wind_angle} in file {STL_GEOREF}.stl')
-            else:
-                rotated_stl_basename = STL_BASENAME
+            
+            rotate_geometry(POST_DIR + STL_BASENAME + '.stl', POST_DIR + STL_BASENAME, wind_angle)
+            rotate_geometry(POST_DIR + STL_GEOREF + '.stl', POST_DIR + STL_GEOREF, wind_angle)
+            rotated_stl_basename = STL_BASENAME
+            rotated_stl_basename_geo = STL_GEOREF
+            print(rotated_stl_basename)
+            print(f'Rotated geometry to align with wind direction: {wind_angle} in file {rotated_stl_basename_geo}.stl')
     
             args = get_args()
+            # Save rotated geometry coordinates
             GCP = {}
-            min_coords, max_coords = calculate_bounding_box(POST_DIR + STL_GEOREF + '.stl')
+            min_coords, max_coords = calculate_bounding_box(POST_DIR + rotated_stl_basename_geo + '.stl')
             min_x, min_y = min_coords[:2]
             max_x, max_y = max_coords[:2]
             GCP['min_x'] = min_x
@@ -89,7 +91,7 @@ if __name__ == '__main__':
                 writer = csv.writer(csv_file)
                 writer.writerow(GCP.keys())
                 writer.writerow(GCP.values())
-                
+                     
             move_stl_to_origin(POST_DIR + rotated_stl_basename + '.stl', POST_DIR + rotated_stl_basename + '.stl')
             min_coords, max_coords = calculate_bounding_box(POST_DIR + rotated_stl_basename + '.stl')
             min_x, min_y = min_coords[:2]

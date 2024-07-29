@@ -2,7 +2,8 @@
 #SBATCH --job-name=WORKFLOW
 #SBATCH --output=WORKFLOW_%j.out
 #SBATCH --error=WORKFLOW_%j.err
-#SBATCH --ntasks=12
+#SBATCH --nodes=4
+#SBATCH --ntasks=448
 #SBATCH --time=02:00:00
 #SBATCH --qos=gp_debug
 #SBATCH --account=bsc21
