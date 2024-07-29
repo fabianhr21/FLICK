@@ -2,13 +2,11 @@
 #SBATCH --job-name=WORKFLOW
 #SBATCH --output=WORKFLOW_%j.out
 #SBATCH --error=WORKFLOW_%j.err
-#SBATCH --nodes=4
-#SBATCH --ntasks=448
-#SBATCH --time=02:00:00
-#SBATCH --qos=gp_debug
+#SBATCH --nodes=6
+#SBATCH --ntasks=672
+#SBATCH --time=06:00:00
+#SBATCH --qos=gp_bsccase
 #SBATCH --account=bsc21
-#SBATCH --mail-type=END
-#SBATCH --mail-user=fabian.hernandez@bsc.es
 
 if [ "$#" -lt 1 ]; then
     echo "Usage: $0 basename"

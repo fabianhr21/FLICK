@@ -204,7 +204,7 @@ if __name__ == '__main__':
             name = f"{DATA_SAMPLE_BASENAME}-{idx}-"
 
             print("Printing model input fields")
-            # plot_field(x[0][0],name + 'MASK')  #Field 0 corresponds to MASK
+            plot_field(x[0][0],name + 'MASK')  #Field 0 corresponds to MASK
             np.savetxt(OUTPUT_PATH + name + 'MASK_matrix.csv', x[0][0].numpy(), delimiter=',')
             # plot_field(x[0][1],name+'HEGT')  #Field 1 corresponds to building height HEGT
             # plot_field(x[0][2],'WDST')  #Field 2 corresponds to distance to nearest wall WDST

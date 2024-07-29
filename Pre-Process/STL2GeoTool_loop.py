@@ -25,8 +25,8 @@ STL_SCALE = 1.0
 DIST_RESOLUTION = 1.0
 
 # Parameters
-# WIND_DIRECTION =  [209.37, 194.43, 195.01, 187.04, 177.39, 194.31, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
-WIND_DIRECTION = [0,90,180,270]
+WIND_DIRECTION =  [209.37, 194.43, 195.01] #, 187.04, 177.39, 194.31] #, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
+# WIND_DIRECTION = [0,20,40,60,80]
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [0, 0, 0.0]
 STEP_SIZE = 128
@@ -108,9 +108,9 @@ if __name__ == '__main__':
         n = 0
         x_frames = 0
         y_frames = 0
-        for i in range(overlap, -y_length, -overlap):
+        for i in range(0, -y_length, -overlap):
             y_frames += 1
-            for j in range(overlap, -x_length, -overlap):
+            for j in range(0, -x_length, -overlap):
                 if i == 0:
                     x_frames += 1
                 STL_DISPLACEMENT = [j, i, 0]
