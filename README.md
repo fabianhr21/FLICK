@@ -8,6 +8,8 @@ In the Pre-Process directory, you can find scripts to prepare geometry from STL 
 You can obtain BIM models from all of Catalunya on the following website:
 https://geoportalcartografia.amb.cat/AppGeoportalCartografia2/index.html
 
+And from all spain from: https://centrodedescargas.cnig.es/CentroDescargas/buscar-mapa
+
 You can also use part of the City4CFD repository to generate CFD domains ready for simulation. This guideline can be used for traditional CFD solvers but this one is focused in preparing geometry for simulation with SOD2D, another repository developed by the Barcelona Supercomputing Center.
 
 ## Wind-NN
