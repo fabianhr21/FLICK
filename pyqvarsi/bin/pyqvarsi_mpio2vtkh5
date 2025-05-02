@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, MPIO to VTKH5.
+#
+# Converter for MPIO format to VTKH5.
+#
+# Last rev: 11/06/2021
+from __future__ import print_function, division
+
+# Please do not delete this part otherwise it will not work
+# you have been warned after a long weekend of debugging
+import mpi4py
+mpi4py.rc.recv_mprobe = False
+
+import os, argparse, numpy as np, glob
+import pyQvarsi
+
+
+## Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_mpio2vtkh5', description='Converter for MPIO format to VTKH5')
+argpar.add_argument('-i','--instant',type=str,help='instant list to convert, separated by commas (default: all)',dest='instant')
+argpar.add_argument('-v','--variables',type=str,help='list of variables to include from MPIO files given as a list separated by comma (e.g., VELOC,PRESS)',dest='vars')
+argpar.add_argument('--basedir',type=str,help='base directory where to output the data (default: ./)',dest='basedir')
+argpar.add_argument('--outdir',type=str,help='output directory where to output the data (default: ./)',dest='outdir')
+argpar.add_argument('casename',type=str,help='Name of the Alya case')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.basedir: args.basedir = './'
+if not args.outdir:  args.outdir  = './'
+if args.vars:        args.vars    = args.vars.split(',')
+if args.instant:     args.instant = [int(i) for i in args.instant.split(',')]
+
+# Detect instants automatically
+if not args.instant:
+    fmt_string   = os.path.join(args.basedir,'%s-*-*.post.mpio.bin'%args.casename)
+    args.instant = np.unique(np.array([int(f.split('-')[-1].split('.')[0]) for f in glob.glob(fmt_string)]))
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_mpio2vtkh5 |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Converter for MPIO format to VTKH5.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Load Mesh in MPIO format
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Opening mesh <%s>... '%args.casename,end='',flush=True)
+m = pyQvarsi.Mesh.read(args.casename,basedir=args.basedir,ngauss=-1,read_commu=False,read_massm=False,read_codno=False,read_exnor=False,compute_massMatrix=False)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Create output directory
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Creating output directory <%s>... '%args.outdir,end='',flush=True)
+os.makedirs(args.outdir,exist_ok=True)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Store the mesh
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Storing the mesh data... ',end='',flush=True)
+m.write(args.casename+'-mesh',basedir=args.outdir,fmt='vtkh5')
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Loop on the instant list 
+detect_vars = True if not args.vars else False
+instants, tsteps = [], []
+for instant in args.instant:
+    # Detect variables automatically
+    if detect_vars:
+        fmt_string = os.path.join(args.basedir,pyQvarsi.io.MPIO_BINFILE_P_FMT%(args.casename,'*',instant))
+        args.vars  = [v.split('-')[-2] for v in glob.glob(fmt_string)]
+    # Process instant
+    pyQvarsi.pprint(0,'--| Processing instant <%d>... '%instant,end='',flush=True)
+    # Read field
+    f,h = pyQvarsi.Field.read(args.casename,args.vars,instant,m.xyz,basedir=args.basedir)
+    # Store mesh and field into VTKH5
+    outname = '%s-%08d' % (args.casename,instant)
+    m.write(outname,basedir=args.outdir,fmt='vtkh5',linkfile=args.casename+'-mesh')
+    f.write(outname,basedir=args.outdir,fmt='vtkh5')
+    # Append list
+    instants.append(instant)
+    tsteps.append(h.time)
+    pyQvarsi.pprint(0,'done!',flush=True)
+
+# Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

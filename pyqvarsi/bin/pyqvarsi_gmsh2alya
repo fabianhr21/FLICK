@@ -1,0 +1,647 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, gmsh2alya.
+#
+# Export a mesh from GMSH to Alya format.
+#
+# Last rev: 05/08/2021
+from __future__ import print_function, division
+
+# Please do not delete this part otherwise it will not work
+# you have been warned after a long weekend of debugging
+import mpi4py
+mpi4py.rc.recv_mprobe = False
+from mpi4py import MPI
+
+import os, itertools, argparse, numpy as np
+import pyQvarsi
+
+MPI_RANK = MPI.COMM_WORLD.Get_rank()
+MPI_SIZE = MPI.COMM_WORLD.Get_size()
+
+gsmh2AlyaCellTypes = {
+	1  : 2, #1: 2-node line.
+#8: 3-node second order line (2 nodes associated with the vertices and 1 with the edge).
+#26: 4-node third order edge (2 nodes associated with the vertices, 2 internal to the edge)
+#27: 5-node fourth order edge (2 nodes associated with the vertices, 3 internal to the edge)
+#28: 6-node fifth order edge (2 nodes associated with the vertices, 4 internal to the edge)
+	2  : 10, #2: 3-node triangle.
+	3  : 12, #3: 4-node quadrangle.
+#9: 6-node second order triangle (3 nodes associated with the vertices and 3 with the edges).
+#10: 9-node second order quadrangle (4 nodes associated with the vertices, 4 with the edges and 1 with the face).
+#16: 8-node second order quadrangle (4 nodes associated with the vertices and 4 with the edges).
+#20: 9-node third order incomplete triangle (3 nodes associated with the vertices, 6 with the edges)
+#21: 10-node third order triangle (3 nodes associated with the vertices, 6 with the edges, 1 with the face)
+#22: 12-node fourth order incomplete triangle (3 nodes associated with the vertices, 9 with the edges)
+#23: 15-node fourth order triangle (3 nodes associated with the vertices, 9 with the edges, 3 with the face)
+#24: 15-node fifth order incomplete triangle (3 nodes associated with the vertices, 12 with the edges)
+#25: 21-node fifth order complete triangle (3 nodes associated with the vertices, 12 with the edges, 6 with the face)
+	4  : 30, #4: 4-node tetrahedron.
+	5  : 37, #5: 8-node hexahedron.
+	6  : 34, #6: 6-node prism.
+	7  : 32, #7: 5-node pyramid.
+#11: 10-node second order tetrahedron (4 nodes associated with the vertices and 6 with the edges).
+	12 : 39, #12: 27-node second order hexahedron (8 nodes associated with the vertices, 12 with the edges, 6 with the faces and 1 with the volume).
+#13: 18-node second order prism (6 nodes associated with the vertices, 9 with the edges and 3 with the quadrangular faces).
+#14: 14-node second order pyramid (5 nodes associated with the vertices, 8 with the edges and 1 with the quadrangular face).
+#17: 20-node second order hexahedron (8 nodes associated with the vertices and 12 with the edges).
+#18: 15-node second order prism (6 nodes associated with the vertices and 9 with the edges).
+#19: 13-node second order pyramid (5 nodes associated with the vertices and 8 with the edges).
+#29: 20-node third order tetrahedron (4 nodes associated with the vertices, 12 with the edges, 4 with the faces)
+#30: 35-node fourth order tetrahedron (4 nodes associated with the vertices, 18 with the edges, 12 with the faces, 1 in the volume)
+#31: 56-node fifth order tetrahedron (4 nodes associated with the vertices, 24 with the edges, 24 with the faces, 4 in the volume)
+	26 :  4, #26: 4-node line.
+	36 : 15, #36: 16-node third order quadrangle. 
+	92 : 40, #92: 64-node third order hexahedron (8 nodes associated with the vertices, 24 with the edges, 24 with the faces, 8 in the volume) 
+}
+
+Alya2Names = {
+	2  : 'LIN02', #1: 2-node line.
+#8: 3-node second order line (2 nodes associated with the vertices and 1 with the edge).
+#26: 4-node third order edge (2 nodes associated with the vertices, 2 internal to the edge)
+#27: 5-node fourth order edge (2 nodes associated with the vertices, 3 internal to the edge)
+#28: 6-node fifth order edge (2 nodes associated with the vertices, 4 internal to the edge)
+	10 : 'TRI03', #2: 3-node triangle.
+	12 : 'QUA04', #3: 4-node quadrangle.
+#9: 6-node second order triangle (3 nodes associated with the vertices and 3 with the edges).
+#10: 9-node second order quadrangle (4 nodes associated with the vertices, 4 with the edges and 1 with the face).
+#16: 8-node second order quadrangle (4 nodes associated with the vertices and 4 with the edges).
+#20: 9-node third order incomplete triangle (3 nodes associated with the vertices, 6 with the edges)
+#21: 10-node third order triangle (3 nodes associated with the vertices, 6 with the edges, 1 with the face)
+#22: 12-node fourth order incomplete triangle (3 nodes associated with the vertices, 9 with the edges)
+#23: 15-node fourth order triangle (3 nodes associated with the vertices, 9 with the edges, 3 with the face)
+#24: 15-node fifth order incomplete triangle (3 nodes associated with the vertices, 12 with the edges)
+#25: 21-node fifth order complete triangle (3 nodes associated with the vertices, 12 with the edges, 6 with the face)
+	30 : 'TET04', #4: 4-node tetrahedron.
+	37 : 'HEX08', #5: 8-node hexahedron.
+	34 : 'PEN06', #6: 6-node prism.
+	32 : 'PYR05', #7: 5-node pyramid.
+#11: 10-node second order tetrahedron (4 nodes associated with the vertices and 6 with the edges).
+	39 : 'HEX27', #12: 27-node second order hexahedron (8 nodes associated with the vertices, 12 with the edges, 6 with the faces and 1 with the volume).
+#13: 18-node second order prism (6 nodes associated with the vertices, 9 with the edges and 3 with the quadrangular faces).
+#14: 14-node second order pyramid (5 nodes associated with the vertices, 8 with the edges and 1 with the quadrangular face).
+#17: 20-node second order hexahedron (8 nodes associated with the vertices and 12 with the edges).
+#18: 15-node second order prism (6 nodes associated with the vertices and 9 with the edges).
+#19: 13-node second order pyramid (5 nodes associated with the vertices and 8 with the edges).
+#29: 20-node third order tetrahedron (4 nodes associated with the vertices, 12 with the edges, 4 with the faces)
+#30: 35-node fourth order tetrahedron (4 nodes associated with the vertices, 18 with the edges, 12 with the faces, 1 in the volume)
+#31: 56-node fifth order tetrahedron (4 nodes associated with the vertices, 24 with the edges, 24 with the faces, 4 in the volume)
+	4  : 'LIN04', #26: 4-node line.
+	36 : 'QUA16', #36: 16-node third order quadrangle. 
+	40 : 'HEX64', #92: 64-node third order hexahedron (8 nodes associated with the vertices, 24 with the edges, 24 with the faces, 8 in the volume) 
+}
+
+gsmh2Nodes = {
+	1  : 2, #1: 2-node line.
+#8: 3-node second order line (2 nodes associated with the vertices and 1 with the edge).
+#26: 4-node third order edge (2 nodes associated with the vertices, 2 internal to the edge)
+#27: 5-node fourth order edge (2 nodes associated with the vertices, 3 internal to the edge)
+#28: 6-node fifth order edge (2 nodes associated with the vertices, 4 internal to the edge)
+	2  : 3, #2: 3-node triangle.
+	3  : 4, #3: 4-node quadrangle.
+#9: 6-node second order triangle (3 nodes associated with the vertices and 3 with the edges).
+#10: 9-node second order quadrangle (4 nodes associated with the vertices, 4 with the edges and 1 with the face).
+#16: 8-node second order quadrangle (4 nodes associated with the vertices and 4 with the edges).
+#20: 9-node third order incomplete triangle (3 nodes associated with the vertices, 6 with the edges)
+#21: 10-node third order triangle (3 nodes associated with the vertices, 6 with the edges, 1 with the face)
+#22: 12-node fourth order incomplete triangle (3 nodes associated with the vertices, 9 with the edges)
+#23: 15-node fourth order triangle (3 nodes associated with the vertices, 9 with the edges, 3 with the face)
+#24: 15-node fifth order incomplete triangle (3 nodes associated with the vertices, 12 with the edges)
+#25: 21-node fifth order complete triangle (3 nodes associated with the vertices, 12 with the edges, 6 with the face)
+	4  : 4, #4: 4-node tetrahedron.
+	5  : 8, #5: 8-node hexahedron.
+	6  : 6, #6: 6-node prism.
+	7  : 5, #7: 5-node pyramid.
+#11: 10-node second order tetrahedron (4 nodes associated with the vertices and 6 with the edges).
+	12 : 27, #12: 27-node second order hexahedron (8 nodes associated with the vertices, 12 with the edges, 6 with the faces and 1 with the volume).
+#13: 18-node second order prism (6 nodes associated with the vertices, 9 with the edges and 3 with the quadrangular faces).
+#14: 14-node second order pyramid (5 nodes associated with the vertices, 8 with the edges and 1 with the quadrangular face).
+#17: 20-node second order hexahedron (8 nodes associated with the vertices and 12 with the edges).
+#18: 15-node second order prism (6 nodes associated with the vertices and 9 with the edges).
+#19: 13-node second order pyramid (5 nodes associated with the vertices and 8 with the edges).
+#29: 20-node third order tetrahedron (4 nodes associated with the vertices, 12 with the edges, 4 with the faces)
+#30: 35-node fourth order tetrahedron (4 nodes associated with the vertices, 18 with the edges, 12 with the faces, 1 in the volume)
+#31: 56-node fifth order tetrahedron (4 nodes associated with the vertices, 24 with the edges, 24 with the faces, 4 in the volume)
+	26 :  4, #26: 4-node line.
+	36 : 36, #36: 16-node third order quadrangle. 
+	92 : 64, #92: 64-node third order hexahedron (8 nodes associated with the vertices, 24 with the edges, 24 with the faces, 8 in the volume) 
+}
+
+def _reduce(v1,v2,dtype):
+	'''
+	v1 and v2 are two arrays that contain
+	v1[:,0] -> index of the minimum
+	v1[:,1] -> value of the minimum
+	They have both the same size
+	'''
+	valmat = np.vstack([v1,v2])
+	imax   = np.argmax(valmat,axis=0)
+	return np.array([valmat[imax[i],i] for i in range(imax.shape[0])],v1.dtype)
+
+gmsh_reduce = MPI.Op.Create(_reduce, commute=True)
+
+def find_node_in_elems(inode,conec):
+	'''
+	Finds if a node ID is inside a connectivity list
+	and returns which element has the node.
+	'''
+	return np.where(np.any(np.isin(conec,inode),axis=1))[0]
+
+
+# Argparse
+pyQvarsi.cr_start('gmsh2alya',0)
+argpar = argparse.ArgumentParser(prog='pyQvarsi_gmsh2alya', description='Export a mesh from GMSH to Alya format')
+argpar.add_argument('mesh_file',type=str,help='GMSH input file')
+argpar.add_argument('-c','--casename',type=str,help='name of the case in alya')
+argpar.add_argument('-s','--size',type=int,help='maximum size of the data block to read')
+argpar.add_argument('-p','--periodic',type=str,help='codes of periodic boundaries, if any, as a string')
+argpar.add_argument('--scale',type=str,help='scaling vector (default: 1,1,1)')
+argpar.add_argument('-2','--is2D',action='store_true',help='parse a 2D mesh instead')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.casename: args.casename = args.mesh_file
+if not args.periodic: args.periodic = []
+else:                 args.periodic = [int(i) for i in args.periodic.split(',')]
+if not args.scale:    args.scale    = '1,1,1'
+
+args.scale   = [float(i) for i in args.scale.split(',')]
+default_size = True if not args.size else False
+dim_id       = 2 if args.is2D else 3
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_gmsh2alya |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Export a mesh from GMSH to Alya format.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Open GMSH file
+args.mesh_file += '.msh'
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Opening <%s>... '%args.mesh_file,end='',flush=True)
+file = open(args.mesh_file,'r') if pyQvarsi.utils.is_rank_or_serial() else None
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Check GMSH version
+vers = np.genfromtxt(file,comments='$',max_rows=1) if pyQvarsi.utils.is_rank_or_serial() else None
+vers = pyQvarsi.utils.mpi_bcast(vers)
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| GMSH file version <%.1f>.'%vers[0])
+pyQvarsi.pprint(0,'--|',flush=True)
+if not vers[0] == 2.2: pyQvarsi.raiseError('This parser can only understand version 2.2 of the Gmsh file format')
+# At this point we have checked that the file version is 2.2
+
+# Read the number of zones
+nzones = int(np.genfromtxt(file,comments='$',max_rows=1)) if pyQvarsi.utils.is_rank_or_serial() else None
+nzones = pyQvarsi.utils.mpi_bcast(nzones)
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Detected <%d> physical names. Reading... '%nzones,end='',flush=True)
+if pyQvarsi.utils.is_rank_or_serial():
+	# Read from file
+	data = np.genfromtxt(file,dtype=('i8','i8','<U256'),comments='$',max_rows=nzones)
+	# Generate a dictionary containing the boundary information
+	zones = {
+		'name'  : np.array([z['f2'].replace('"','') for z in data] if data.ndim > 0 else [data['f2'].tolist().replace('"','')]),
+		'code'  : np.array([z['f1'] for z in data] if data.ndim > 0 else [data['f1'].tolist()]),
+		'dim'   : np.array([z['f0'] for z in data] if data.ndim > 0 else [data['f0'].tolist()]),
+		'isbc'  : np.array([z['f0'] != dim_id for z in data] if data.ndim > 0 else [data['f0'].tolist() != dim_id]),
+		'isper' : np.zeros((nzones,),dtype=bool),
+	}
+	del data
+	# Build periodicity
+	zones['isper'] = [True if zones['code'][iz] in args.periodic else False for iz in range(nzones)]
+else:
+	zones = None
+zones = pyQvarsi.utils.mpi_bcast(zones)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+# Failsafes
+if np.sum(np.logical_not(zones['isbc'])) > 1: 
+	pyQvarsi.raiseError('More than one interior zone is not supported!')
+
+# Now read the number of nodes
+pyQvarsi.cr_start('gmsh2alya.nodes',0)
+nnodes = int(np.genfromtxt(file,comments='$',max_rows=1)) if pyQvarsi.utils.is_rank_or_serial() else None
+nnodes = pyQvarsi.utils.mpi_bcast(nnodes)
+if default_size: args.size = nnodes
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Detected <%d> nodes.'%nnodes,flush=True)
+# Generate header for the COORD file
+fname  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'COORD')
+header = pyQvarsi.io.AlyaMPIO_header(
+	fieldname   = 'COORD',
+	dimension   = 'VECTO',
+	association = 'NPOIN',
+	npoints     = nnodes,
+	nsub        = 1,
+	sequence    = 'SEQUE',
+	ndims       = dim_id,
+	itime       = 0,
+	time        = 0,
+	ignore_err  = True
+)
+# Read the number of nodes in batches and write the COORD file
+pyQvarsi.pprint(0,'--| Reading in batches of %d: '%args.size,flush=True)
+for ibatch in range(int(np.ceil(nnodes/args.size))):
+	pyQvarsi.pprint(0,'--|   Batch %d... '%(ibatch+1),end='',flush=True)
+	# Read from text file
+	nread = min(args.size,nnodes-ibatch*args.size)
+	data  = np.genfromtxt(file,comments='$',max_rows=nread)[:,1:dim_id+1] if pyQvarsi.utils.is_rank_or_serial() else None
+	# Scale
+	if pyQvarsi.utils.is_rank_or_serial():
+		for idim in range(dim_id):
+			data[:,idim] *= args.scale[idim]
+	# Store into MPIO file
+	pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname,data,header,nread,ibatch*args.size,rank=0)
+	pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+del data, fname, header
+pyQvarsi.cr_stop('gmsh2alya.nodes',0)
+
+# Now read the number of elements
+pyQvarsi.cr_start('gmsh2alya.elements',0)
+nelems = int(np.genfromtxt(file,comments='$',max_rows=1)) if pyQvarsi.utils.is_rank_or_serial() else None
+nelems = pyQvarsi.utils.mpi_bcast(nelems)
+if default_size: args.size = nelems
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Detected <%d> elements in total.'%nelems,flush=True)
+# Boundary and interior elements are stored now consecutively, however,
+# at this point we do not know how many of them are present.
+#
+# We will allocate a memory space for each one of them and we will store
+# them as we read by chunks.
+if pyQvarsi.utils.is_rank_or_serial():
+	pyQvarsi.pprint(0,'--| Scan for boundary and interior elements.',flush=True)
+	id_interior  = int(zones['code'][np.logical_not(zones['isbc'])])
+	nel_interior, nel_boundary = 0, 0
+	lnods_ndim, lnodb_ndim     = 0, 0
+	nbatchi, nbatchb           = 0, 0
+	# Read the number of elements in batches 
+	pyQvarsi.pprint(0,'--| Reading in batches of %d: '%args.size,flush=True)
+	for ibatch in range(int(np.ceil(nelems/args.size))):
+		pyQvarsi.pprint(0,'--|   Batch %d... '%(ibatch+1),end='',flush=True)	
+		# Read from text file
+		nread = min(args.size,nelems-ibatch*args.size)
+		iel_interior, iel_boundary = 0, 0
+		eltyi = -np.ones((nread,),np.int32)
+		eltyb = -np.ones((nread,),np.int32)
+		codeb = -np.ones((nread,),np.int32)
+		lnods = np.zeros((nread,64),np.int32) # 64 as the maximum order element that we can have
+		lnodb = np.zeros((nread,64),np.int32) # 64 as the maximum order element that we can have
+		# Read the file line by line
+		for iline in range(nread):
+			# Read one line
+			linestr = file.readline()
+			line    = np.array([int(l) for l in linestr.split()])
+			# Parse line
+			eltype = line[1]
+			elkind = line[3]
+			conec  = line[5:]
+			# Skip the element in case of periodicity
+			if elkind in args.periodic: continue
+			# We need to find we are interior or boundary
+			if elkind == id_interior:
+				# Interior element
+				eltyi[iel_interior]             = gsmh2AlyaCellTypes[eltype]
+				lnods[iel_interior,:len(conec)] = conec
+				lnods_ndim                      = max(lnods_ndim,gsmh2Nodes[eltype])
+				iel_interior                   += 1
+			else:
+				# Boundary element
+				eltyb[iel_boundary]             = gsmh2AlyaCellTypes[eltype]
+				lnodb[iel_boundary,:len(conec)] = conec
+				codeb[iel_boundary]             = elkind				
+				lnodb_ndim                      = max(lnodb_ndim,gsmh2Nodes[eltype])
+				iel_boundary                   += 1
+		# Finish the batch read
+		nel_interior += iel_interior
+		nel_boundary += iel_boundary
+		# Get rid of unwanted interior points
+		to_keep = eltyi != -1
+		eltyi   = eltyi[to_keep]
+		lnods   = lnods[to_keep,:]
+		# Get rid of unwanted boundary points
+		to_keep = eltyb != -1
+		eltyb   = eltyb[to_keep]
+		lnodb   = lnodb[to_keep,:]
+		codeb   = codeb[to_keep]
+		# Store batch numpy arrays if given a size, assuming they cannot fit in memory
+		if not default_size:
+			if not np.all(eltyi == -1):
+				np.savez('interior_%d.npz'%(nbatchi+1),eltyi=eltyi,lnods=lnods)
+				nbatchi += 1 
+			if not np.all(eltyb == -1):
+				np.savez('boundary_%d.npz'%(nbatchb+1),eltyb=eltyb,lnodb=lnodb,codeb=codeb)
+				nbatchb += 1
+		pyQvarsi.pprint(0,'done!')
+
+	file.close()
+	pyQvarsi.pprint(0,'--|',flush=True)
+	pyQvarsi.pprint(0,'--| Found <%d> elements and <%d> boundary elements.'%(nel_interior,nel_boundary),flush=True)
+else:
+	nel_interior, nel_boundary = 0, 0
+	lnods_ndim, lnodb_ndim     = 0, 0
+	nbatchi, nbatchb           = 0, 0
+	eltyi, lnods               = None, None
+	eltyb, lnodb, codeb        = None, None, None
+nel_interior = pyQvarsi.utils.mpi_bcast(nel_interior)
+nel_boundary = pyQvarsi.utils.mpi_bcast(nel_boundary)
+lnods_ndim   = pyQvarsi.utils.mpi_bcast(lnods_ndim)
+lnodb_ndim   = pyQvarsi.utils.mpi_bcast(lnodb_ndim)
+nbatchi      = pyQvarsi.utils.mpi_bcast(nbatchi)
+nbatchb      = pyQvarsi.utils.mpi_bcast(nbatchb)
+pyQvarsi.cr_stop('gmsh2alya.elements',0)
+
+# Boundary elements
+pyQvarsi.cr_start('gmsh2alya.boundary',0)
+if nel_boundary > 0:
+	pyQvarsi.pprint(0,'--| Writing boundary elements.',flush=True)
+	# Boundary type
+	fname_ltypb  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'LTYPB')
+	header_ltypb = pyQvarsi.io.AlyaMPIO_header(
+		fieldname   = 'LTYPB',
+		dimension   = 'SCALA',
+		association = 'NBOUN',
+		dtype       = 'INTEG',
+		size        = '4BYTE',
+		npoints     = nel_boundary,
+		nsub        = 1,
+		sequence    = 'SEQUE',
+		ndims       = 1,
+		itime       = 0,
+		time        = 0,
+		ignore_err  = True
+	)
+	# Boundary connectivity
+	fname_lnodb  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'LNODB')
+	header_lnodb = pyQvarsi.io.AlyaMPIO_header(
+		fieldname   = 'LNODB',
+		dimension   = 'VECTO',
+		association = 'NBOUN',
+		dtype       = 'INTEG',
+		size        = '4BYTE',
+		npoints     = nel_boundary,
+		nsub        = 1,
+		sequence    = 'SEQUE',
+		ndims       = lnodb_ndim,
+		itime       = 0,
+		time        = 0,
+		ignore_err  = True
+	)
+	# Boundary codes
+	fname_codbo  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'CODBO')
+	header_codbo = pyQvarsi.io.AlyaMPIO_header(
+		fieldname   = 'CODBO',
+		dimension   = 'SCALA',
+		association = 'NBOUN',
+		dtype       = 'INTEG',
+		size        = '4BYTE',
+		npoints     = nel_boundary,
+		nsub        = 1,
+		sequence    = 'SEQUE',
+		ndims       = 1,
+		itime       = 0,
+		time        = 0,
+		ignore_err  = True
+	)
+	# Boundary sets
+	fname_lbset  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'LBSET')
+	header_lbset = pyQvarsi.io.AlyaMPIO_header(
+		fieldname   = 'LBSET',
+		dimension   = 'SCALA',
+		association = 'NBOUN',
+		dtype       = 'INTEG',
+		size        = '4BYTE',
+		npoints     = nel_boundary,
+		nsub        = 1,
+		sequence    = 'SEQUE',
+		ndims       = 1,
+		itime       = 0,
+		time        = 0,
+		ignore_err  = True
+	)
+
+	if default_size:
+		# Directly write if the arrays are available on memory
+		if pyQvarsi.utils.is_rank_or_serial(): lnodb = lnodb[:,:lnodb_ndim]
+		# Store into MPIO file
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_ltypb,eltyb,header_ltypb,nel_boundary,0,rank=0)
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lnodb,lnodb,header_lnodb,nel_boundary,0,rank=0)
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_codbo,codeb,header_codbo,nel_boundary,0,rank=0)
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lbset,codeb,header_lbset,nel_boundary,0,rank=0)
+	else:
+		# We have stored partial files on disk to save memory
+		# perform a read by batches and store into MPIO
+		nwrite, nskip = 0, 0
+		pyQvarsi.pprint(0,'--| Writing in batches: ',flush=True)
+		for ibatch in range(nbatchb):
+			pyQvarsi.pprint(0,'--|   Batch %d... '%(ibatch+1),end='',flush=True)
+			# Load batch data
+			if pyQvarsi.utils.is_rank_or_serial():
+				data   = np.load('boundary_%d.npz'%(ibatch+1))
+				eltyb  = data['eltyb']
+				lnodb  = data['lnodb'][:,:lnodb_ndim]
+				codeb  = data['codeb']
+				nwrite = eltyb.shape[0]
+				os.remove('boundary_%d.npz'%(ibatch+1))
+			else:
+				eltyb = None
+				lnodb = None
+				codeb = None
+			# Store into MPIO file
+			pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_ltypb,eltyb,header_ltypb,nwrite,nskip,rank=0)
+			pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lnodb,lnodb,header_lnodb,nwrite,nskip,rank=0)
+			pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_codbo,codeb,header_codbo,nwrite,nskip,rank=0)
+			pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lbset,codeb,header_lbset,nwrite,nskip,rank=0)
+			if pyQvarsi.utils.is_rank_or_serial(): nskip += nwrite
+			pyQvarsi.pprint(0,'done!')
+	pyQvarsi.pprint(0,'--|',flush=True)
+	del fname_ltypb, fname_codbo, fname_lbset
+	del header_ltypb, header_lnodb, header_codbo, header_lbset
+pyQvarsi.cr_stop('gmsh2alya.boundary',0)
+
+# Interior elements
+pyQvarsi.cr_start('gmsh2alya.interior',0)
+pyQvarsi.pprint(0,'--| Writing interior elements.',flush=True)
+# Element type
+fname_ltype  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'LTYPE')
+header_ltype = pyQvarsi.io.AlyaMPIO_header(
+	fieldname   = 'LTYPE',
+	dimension   = 'SCALA',
+	association = 'NELEM',
+	dtype       = 'INTEG',
+	size        = '4BYTE',
+	npoints     = nel_interior,
+	nsub        = 1,
+	sequence    = 'SEQUE',
+	ndims       = 1,
+	itime       = 0,
+	time        = 0,
+	ignore_err  = True
+)
+# Element connectivity
+fname_lnods  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'LNODS')
+header_lnods = pyQvarsi.io.AlyaMPIO_header(
+	fieldname   = 'LNODS',
+	dimension   = 'VECTO',
+	association = 'NELEM',
+	dtype       = 'INTEG',
+	size        = '4BYTE',
+	npoints     = nel_interior,
+	nsub        = 1,
+	sequence    = 'SEQUE',
+	ndims       = lnods_ndim,
+	itime       = 0,
+	time        = 0,
+	ignore_err  = True
+)
+eltype = []
+if default_size:
+	# Directly write if the arrays are available on memory
+	if pyQvarsi.utils.is_rank_or_serial(): lnods = lnods[:,:lnods_ndim]
+	# Store into MPIO file
+	pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_ltype,eltyi,header_ltype,nel_interior,0,rank=0)
+	pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lnods,lnods,header_lnods,nel_interior,0,rank=0)
+	if pyQvarsi.utils.is_rank_or_serial(): eltype = [Alya2Names[e] for e in np.unique(eltyi)]
+else:
+	# We have stored partial files on disk to save memory
+	# perform a read by batches and store into MPIO
+	nwrite, nskip = 0, 0
+	pyQvarsi.pprint(0,'--| Writing in batches: ',flush=True)
+	for ibatch in range(nbatchi):
+		pyQvarsi.pprint(0,'--|   Batch %d... '%(ibatch+1),end='',flush=True)
+		# Load batch data
+		if pyQvarsi.utils.is_rank_or_serial():
+			data   = np.load('interior_%d.npz'%(ibatch+1))
+			eltyi  = data['eltyi']
+			lnods  = data['lnods'][:,:lnods_ndim]
+			nwrite = eltyi.shape[0]
+			os.remove('interior_%d.npz'%(ibatch+1))
+			eltype = np.hstack([eltype,np.unique(eltyi)])
+		else:
+			eltyi = None
+			lnods = None
+		# Store into MPIO file
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_ltype,eltyi,header_ltype,nwrite,nskip,rank=0)
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lnods,lnods,header_lnods,nwrite,nskip,rank=0)
+		if pyQvarsi.utils.is_rank_or_serial(): nskip += nwrite
+		pyQvarsi.pprint(0,'done!')
+	if pyQvarsi.utils.is_rank_or_serial(): eltype = [Alya2Names[e] for e in np.unique(eltyi)]
+pyQvarsi.pprint(0,'--|',flush=True)
+del fname_ltype, header_ltype, header_lnods
+pyQvarsi.cr_stop('gmsh2alya.interior',0)
+
+# Compute LELBO
+# Idea 2, read by zones both connectivities and find the faces
+# This is a real pain in the ass but it must be done
+pyQvarsi.utils.mpi_barrier()
+pyQvarsi.cr_start('gmsh2alya.lelbo',0)
+if nel_boundary > 0:
+	pyQvarsi.pprint(0,'--| Computing element to boundary relation.')
+	fname_lelbo  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.casename,'LELBO')
+	header_lelbo = pyQvarsi.io.AlyaMPIO_header(
+		fieldname   = 'LELBO',
+		dimension   = 'SCALA',
+		association = 'NBOUN',
+		dtype       = 'INTEG',
+		size        = '4BYTE',
+		npoints     = nel_boundary,
+		nsub        = 1,
+		sequence    = 'SEQUE',
+		ndims       = 1,
+		itime       = 0,
+		time        = 0,
+		ignore_err  = True
+	)
+	if default_size:
+		# Assume LNODS to be already in memory
+		lnods = pyQvarsi.utils.mpi_scatter(lnods,root=0,do_split=True) # scatter LNODS
+	else:
+		# Compute a worksplit and have each processor load a part
+		# of the element connectivity matrix
+		mystart,myend = pyQvarsi.utils.worksplit(0,nel_interior,MPI_RANK)
+		lnods,_       = pyQvarsi.io.AlyaMPIO_readByChunk(fname_lnods,myend-mystart,mystart)
+	# Obtain the lenghts of lnods for the offset computation
+	elemlist = np.arange(lnods.shape[0],dtype=np.int32)
+	lens     = pyQvarsi.utils.mpi_gather(lnods.shape[0],all=True)
+	offst    = max(np.sum(lens[:MPI_RANK]),0) if MPI_SIZE > 1 else 0
+
+	# Now compute and write LELBO
+	if default_size: args.size = nel_boundary
+	pyQvarsi.pprint(0,'--| Writing element to boundary relation in batches of %d: '%args.size,flush=True)
+	for ibatch in range(int(np.ceil(nel_boundary/args.size))):
+		pyQvarsi.pprint(0,'--|   Batch %d... '%(ibatch+1),end='',flush=True)
+		rows2read = min(args.size,nel_boundary-ibatch*args.size)
+		rows2skip = ibatch*args.size
+		# All processors should read the batch
+		if default_size:
+			lnodb   = pyQvarsi.utils.mpi_bcast(lnodb,root=0) # scatter LNODB
+		else:
+			lnodb,_ = pyQvarsi.io.AlyaMPIO_readByChunk(fname_lnodb,rows2read,rows2skip)
+		vals = -np.ones((rows2read,),np.int32)
+		# Loop all the elements in the batch
+		for ib in range(rows2read):
+			# Find all the interior elements that contain the first node
+			ielems = find_node_in_elems(lnodb[ib,0],lnods)
+			candidate_elements = elemlist[ielems]
+			# Now, we have one of the following 3 options:
+			#   1. We have multiple candidates, then we need to keep scanning nodes
+			#   2. We have one candidate, then we have found the element
+			#   3. We have found no candidate, hence we don't have the element
+			lnods2    = lnods[ielems,:]
+			elemlist2 = elemlist[ielems]
+			# Loop the remaining nodes and find candidates
+			for ii in range(1,lnodb.shape[1]):
+				if lnodb[ib,ii] == 0: continue
+				# Search on a reduced list
+				ielems    = find_node_in_elems(lnodb[ib,ii],lnods2)
+				candidate_elements = elemlist2[ielems]
+				lnods2    = lnods2[ielems,:]
+				elemlist2 = elemlist2[ielems]
+			# Someone will have found the element, write it to vals
+			if len(candidate_elements) == 1: vals[ib] = candidate_elements[0] + offst + 1
+		# Reduce
+		vals = pyQvarsi.utils.mpi_reduce(vals,op=gmsh_reduce,all=True)
+		# Store into MPIO file
+		pyQvarsi.io.AlyaMPIO_writeByChunk_serial(fname_lelbo,vals,header_lelbo,rows2read,rows2skip,rank=0)
+		pyQvarsi.pprint(0,'done!',flush=True)
+	pyQvarsi.pprint(0,'--|',flush=True)
+	del fname_lelbo, fname_lnods, fname_lnodb, header_lelbo
+pyQvarsi.cr_stop('gmsh2alya.lelbo',0)
+
+# Finishing touches
+pyQvarsi.pprint(0,'--| Finishing mesh export...',flush=True)
+
+# Create .dims.dat file
+if pyQvarsi.utils.is_rank_or_serial():
+	filedims = open(args.casename+'.dims.dat','w')
+	filedims.write('NODAL_POINTS            %d \n'%nnodes)
+	filedims.write('ELEMENTS                %d \n'%nel_interior)
+	filedims.write('SPACE_DIMENSIONS        %d \n'%dim_id)
+	filedims.write('TYPES_OF_ELEMENTS       %s'%eltype[0])
+	for e in eltype[1:]: filedims.write(',%s'%e)
+	filedims.write('\n')
+	filedims.write('BOUNDARIES              %d \n'%nel_boundary)
+	filedims.close()
+pyQvarsi.pprint(0,'--| Written dimensions file <%s>.'%(args.casename+'.dims.dat'),flush=True)
+
+# Write info file
+if pyQvarsi.utils.is_rank_or_serial():
+	fileinfo = open(args.casename+'.info.dat','w')
+	fileinfo.write('BOUNDARY_CODES\n')
+	for iz in range(nzones):
+		if zones['isbc'][iz] and not zones['isper'][iz]:
+			fileinfo.write('    %d    %s\n'%(zones['code'][iz],zones['name'][iz]))
+	fileinfo.write('END_BOUNDARY_CODES\n')
+	fileinfo.close()
+pyQvarsi.pprint(0,'--| Written info file <%s>.'%(args.casename+'.dims.dat'),flush=True)
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Close and say goodbye
+if pyQvarsi.utils.is_rank_or_serial(): file.close()
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_stop('gmsh2alya',0)
+pyQvarsi.cr_info()

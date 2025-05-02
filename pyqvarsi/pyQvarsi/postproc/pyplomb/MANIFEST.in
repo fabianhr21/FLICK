@@ -1,0 +1,6 @@
+include Makefile
+include pyplomb/src/*
+include pyplomb/*.pyx
+exclude pyplomb/*.c
+exclude pyplomb/*.html
+exclude Examples/*

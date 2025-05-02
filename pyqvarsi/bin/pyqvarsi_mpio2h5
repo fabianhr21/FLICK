@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, MPIO to H5.
+#
+# Converter for MPIO format to H5.
+#
+# Last rev: 11/06/2021
+from __future__ import print_function, division
+
+# Please do not delete this part otherwise it will not work
+# you have been warned after a long weekend of debugging
+import mpi4py
+mpi4py.rc.recv_mprobe = False
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+
+## Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_mpioh2h5', description='Converter for MPIO format to H5')
+argpar.add_argument('-c','--casename',required=True,type=str,help='Name of the case for MPIO',dest='casestr')
+argpar.add_argument('-i','--instant',required=True,type=int,help='simulation instant to write (default: 0)',dest='instant')
+argpar.add_argument('-v','--variables',required=True,type=str,help='list of variables to include from MPIO files given as a list separated by comma (e.g., VELOC,PRESS)',dest='vars')
+argpar.add_argument('--basedir',type=str,help='base directory where to output the data (default: ./)',dest='basedir')
+argpar.add_argument('--save-mesh' ,action='store_true',help='also save the mesh on the file',dest='save_mesh')
+argpar.add_argument('--read-commu',action='store_true',help='read communications matrix',dest='read_commu')
+argpar.add_argument('--read-massm',action='store_true',help='read mass matrix',dest='read_massm')
+argpar.add_argument('--read-codno',action='store_true',help='read boundary coordinates',dest='read_codno')
+argpar.add_argument('--read-exnor',action='store_true',help='read node normal',dest='read_exnor')
+argpar.add_argument('--read-lmast',action='store_true',help='read list of masters',dest='read_lmast')
+argpar.add_argument('--clean',action='store_true',help='clear repeated boundaries',dest='clean')
+argpar.add_argument('--lninv-as-array',action='store_true',help='use the global numbering',dest='lninv')
+argpar.add_argument('file',type=str,help='file to convert in HDF5 format')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.basedir:    args.basedir    = './'
+if args.vars:           args.vars       = args.vars.split(',')
+if not args.save_mesh:  args.save_mesh  = False 
+if not args.read_commu: args.read_commu = False 
+if not args.read_massm: args.read_massm = False 
+if not args.read_codno: args.read_codno = False 
+if not args.read_exnor: args.read_exnor = False 
+if not args.read_lmast: args.read_lmast = False
+if not args.clean:      args.clean      = False
+if not args.lninv:      args.lninv      = False
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_mpioh2h5 |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Converter for MPIO format to H5.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Save mesh information
+# Load Mesh in MPIO format
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Opening mesh of <%s>... '%args.casestr,end='',flush=True)
+m = pyQvarsi.Mesh.read(args.casestr,basedir=args.basedir,ngauss=-1,
+					read_commu=args.read_commu,
+					read_massm=args.read_massm,
+					read_codno=args.read_codno,
+					read_exnor=args.read_exnor,
+					read_lmast=args.read_lmast
+)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+if args.save_mesh:
+	# Store Field in MPIO format
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Outputting mesh in HDF5 format... ',end='',flush=True)
+	m.save(args.file)
+	pyQvarsi.pprint(0,'done!')
+	pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Save Field information
+# Load Field in MPIO format
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Opening <%s>... '%args.casestr,end='',flush=True)
+f,_ = pyQvarsi.Field.read(args.casestr,args.vars,args.instant,m.xyz,basedir=args.basedir)
+# Store lninv as array if requested
+if args.lninv: f['LNINV'] = m.lninv
+# Clean boundaries if requested
+if args.clean:
+	pyQvarsi.pprint(0,'--| Cleaning repeated boundaries... ',end='',flush=True)
+	mask = m.bc2rm_mask
+	f = f.selectMask(mask)
+	# Also update partition table
+	f.partition_table.update_points(np.sum(mask))
+	pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'done!')
+
+
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Store Field in H5 format
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Outputting field H5 format... ',end='',flush=True)
+f.save(args.file)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, H5 conversor.
+#
+# Converter for pyQvarsi native HDF5 to other formats.
+#
+# Last rev: 24/01/2023
+from __future__ import print_function, division
+
+# Please do not delete this part otherwise it will not work
+# you have been warned after a long weekend of debugging
+import mpi4py
+mpi4py.rc.recv_mprobe = False
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+
+# Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_h5convert', description='Converter for pyQvarsi native HDF5 to other formats')
+argpar.add_argument('-f','--field',type=str,help='Field in HDF5 format',dest='field')
+argpar.add_argument('-m','--mesh' ,type=str,help='Mesh  in HDF5 format',dest='mesh')
+argpar.add_argument('--fmt' ,type=str,help='Destiny format (default: mpio)',dest='fmt')
+argpar.add_argument('--outdir',type=str,help='base directory where to output the data (default: ./)',dest='outdir')
+argpar.add_argument('--exclude_vars',type=str,help='list of variables to exclude from MPIO files given as a list separated by comma (e.g., VELOC,PRESS; default: empty)',dest='exclude_vars')
+argpar.add_argument('casename',type=str,help='Name of the case for MPIO')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.field and not args.mesh: pyQvarsi.raiseError('Either field or mesh should be provided!')
+if not args.outdir:       args.outdir       = './'
+if not args.fmt:          args.fmt          = 'mpio'
+if args.exclude_vars:     args.exclude_vars = args.exclude_vars.split(',')
+if not args.exclude_vars: args.exclude_vars = []
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_h5convert |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Converter for pyQvarsi native HDF5 to other formats.')
+pyQvarsi.pprint(0,'--|',flush=True)
+if pyQvarsi.utils.is_rank_or_serial(0): os.makedirs(args.outdir,exist_ok=True)
+
+if args.mesh:
+	# Load Mesh in H5 format
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Opening <%s>... '%args.mesh,end='',flush=True)
+	m = pyQvarsi.Mesh.load(args.mesh,compute_massMatrix=False)
+	pyQvarsi.pprint(0,'done!')
+	pyQvarsi.pprint(0,'--|',flush=True)
+	
+	# Store Mesh in format
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Outputting in format <%s>... '%args.fmt,end='',flush=True)
+	m.write(args.casename,basedir=args.outdir,fmt=args.fmt)
+	pyQvarsi.pprint(0,'done!')
+	pyQvarsi.pprint(0,'--|',flush=True)
+
+if args.field:
+	# Load Field in H5 format
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Opening <%s>... '%args.field,end='',flush=True)
+	f = pyQvarsi.Field.load(args.field)
+	pyQvarsi.pprint(0,'done!')
+	pyQvarsi.pprint(0,'--|',flush=True)
+	
+	# Store Field in format
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Outputting in format <%s>... '%args.fmt,end='',flush=True)
+	f.write(args.casename,basedir=args.outdir,exclude_vars=args.exclude_vars,fmt=args.fmt)
+	pyQvarsi.pprint(0,'done!')
+	pyQvarsi.pprint(0,'--|',flush=True)
+
+# Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

@@ -1,0 +1,244 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, gmsh2alya.
+#
+# Export a mesh from GMSH to pyQvarsi format.
+#
+# Last rev: 05/08/2021
+from __future__ import print_function, division
+
+import argparse, numpy as np
+import pyQvarsi
+
+gsmh2AlyaCellTypes = {
+	1  : 2, #1: 2-node line.
+#8: 3-node second order line (2 nodes associated with the vertices and 1 with the edge).
+#26: 4-node third order edge (2 nodes associated with the vertices, 2 internal to the edge)
+#27: 5-node fourth order edge (2 nodes associated with the vertices, 3 internal to the edge)
+#28: 6-node fifth order edge (2 nodes associated with the vertices, 4 internal to the edge)
+	2  : 10, #2: 3-node triangle.
+	3  : 12, #3: 4-node quadrangle.
+#9: 6-node second order triangle (3 nodes associated with the vertices and 3 with the edges).
+#10: 9-node second order quadrangle (4 nodes associated with the vertices, 4 with the edges and 1 with the face).
+#16: 8-node second order quadrangle (4 nodes associated with the vertices and 4 with the edges).
+#20: 9-node third order incomplete triangle (3 nodes associated with the vertices, 6 with the edges)
+#21: 10-node third order triangle (3 nodes associated with the vertices, 6 with the edges, 1 with the face)
+#22: 12-node fourth order incomplete triangle (3 nodes associated with the vertices, 9 with the edges)
+#23: 15-node fourth order triangle (3 nodes associated with the vertices, 9 with the edges, 3 with the face)
+#24: 15-node fifth order incomplete triangle (3 nodes associated with the vertices, 12 with the edges)
+#25: 21-node fifth order complete triangle (3 nodes associated with the vertices, 12 with the edges, 6 with the face)
+	4  : 30, #4: 4-node tetrahedron.
+	5  : 37, #5: 8-node hexahedron.
+	6  : 34, #6: 6-node prism.
+	7  : 32, #7: 5-node pyramid.
+#11: 10-node second order tetrahedron (4 nodes associated with the vertices and 6 with the edges).
+	12 : 39, #12: 27-node second order hexahedron (8 nodes associated with the vertices, 12 with the edges, 6 with the faces and 1 with the volume).
+#13: 18-node second order prism (6 nodes associated with the vertices, 9 with the edges and 3 with the quadrangular faces).
+#14: 14-node second order pyramid (5 nodes associated with the vertices, 8 with the edges and 1 with the quadrangular face).
+#17: 20-node second order hexahedron (8 nodes associated with the vertices and 12 with the edges).
+#18: 15-node second order prism (6 nodes associated with the vertices and 9 with the edges).
+#19: 13-node second order pyramid (5 nodes associated with the vertices and 8 with the edges).
+#29: 20-node third order tetrahedron (4 nodes associated with the vertices, 12 with the edges, 4 with the faces)
+#30: 35-node fourth order tetrahedron (4 nodes associated with the vertices, 18 with the edges, 12 with the faces, 1 in the volume)
+#31: 56-node fifth order tetrahedron (4 nodes associated with the vertices, 24 with the edges, 24 with the faces, 4 in the volume)
+	26 :  4, #26: 4-node line.
+	36 : 15, #36: 16-node third order quadrangle. 
+	92 : 40, #92: 64-node third order hexahedron (8 nodes associated with the vertices, 24 with the edges, 24 with the faces, 8 in the volume) 
+}
+
+gsmh2Nodes = {
+	1  : 2, #1: 2-node line.
+#8: 3-node second order line (2 nodes associated with the vertices and 1 with the edge).
+#26: 4-node third order edge (2 nodes associated with the vertices, 2 internal to the edge)
+#27: 5-node fourth order edge (2 nodes associated with the vertices, 3 internal to the edge)
+#28: 6-node fifth order edge (2 nodes associated with the vertices, 4 internal to the edge)
+	2  : 3, #2: 3-node triangle.
+	3  : 4, #3: 4-node quadrangle.
+#9: 6-node second order triangle (3 nodes associated with the vertices and 3 with the edges).
+#10: 9-node second order quadrangle (4 nodes associated with the vertices, 4 with the edges and 1 with the face).
+#16: 8-node second order quadrangle (4 nodes associated with the vertices and 4 with the edges).
+#20: 9-node third order incomplete triangle (3 nodes associated with the vertices, 6 with the edges)
+#21: 10-node third order triangle (3 nodes associated with the vertices, 6 with the edges, 1 with the face)
+#22: 12-node fourth order incomplete triangle (3 nodes associated with the vertices, 9 with the edges)
+#23: 15-node fourth order triangle (3 nodes associated with the vertices, 9 with the edges, 3 with the face)
+#24: 15-node fifth order incomplete triangle (3 nodes associated with the vertices, 12 with the edges)
+#25: 21-node fifth order complete triangle (3 nodes associated with the vertices, 12 with the edges, 6 with the face)
+	4  : 4, #4: 4-node tetrahedron.
+	5  : 8, #5: 8-node hexahedron.
+	6  : 6, #6: 6-node prism.
+	7  : 5, #7: 5-node pyramid.
+#11: 10-node second order tetrahedron (4 nodes associated with the vertices and 6 with the edges).
+	12 : 27, #12: 27-node second order hexahedron (8 nodes associated with the vertices, 12 with the edges, 6 with the faces and 1 with the volume).
+#13: 18-node second order prism (6 nodes associated with the vertices, 9 with the edges and 3 with the quadrangular faces).
+#14: 14-node second order pyramid (5 nodes associated with the vertices, 8 with the edges and 1 with the quadrangular face).
+#17: 20-node second order hexahedron (8 nodes associated with the vertices and 12 with the edges).
+#18: 15-node second order prism (6 nodes associated with the vertices and 9 with the edges).
+#19: 13-node second order pyramid (5 nodes associated with the vertices and 8 with the edges).
+#29: 20-node third order tetrahedron (4 nodes associated with the vertices, 12 with the edges, 4 with the faces)
+#30: 35-node fourth order tetrahedron (4 nodes associated with the vertices, 18 with the edges, 12 with the faces, 1 in the volume)
+#31: 56-node fifth order tetrahedron (4 nodes associated with the vertices, 24 with the edges, 24 with the faces, 4 in the volume)
+	26 :  4, #26: 4-node line.
+	36 : 36, #36: 16-node third order quadrangle. 
+	92 : 64, #92: 64-node third order hexahedron (8 nodes associated with the vertices, 24 with the edges, 24 with the faces, 8 in the volume) 
+}
+
+# Argparse
+pyQvarsi.cr_start('gmsh2pyQvarsi',0)
+argpar = argparse.ArgumentParser(prog='pyQvarsi_gmsh2pyQvarsi', description='Export a mesh from GMSH to pyQvarsi format')
+argpar.add_argument('mesh_file',type=str,help='GMSH input file')
+argpar.add_argument('out_file',type=str,help='pyQvarsi output file')
+argpar.add_argument('-p','--periodic',type=str,help='codes of periodic boundaries, if any, as a string')
+argpar.add_argument('--scale',type=str,help='scaling vector (default: 1,1,1)')
+argpar.add_argument('-2','--is2D',action='store_true',help='parse a 2D mesh instead')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.periodic: args.periodic = []
+else:                 args.periodic = [int(i) for i in args.periodic.split(',')]
+if not args.scale:    args.scale    = '1,1,1'
+
+args.scale   = [float(i) for i in args.scale.split(',')]
+dim_id       = 2 if args.is2D else 3
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_gmsh2pyQvarsi |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Export a mesh from GMSH to pyQvarsi format.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Open GMSH file
+args.mesh_file += '.msh'
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Opening <%s>... '%args.mesh_file,end='',flush=True)
+file = open(args.mesh_file,'r') if pyQvarsi.utils.is_rank_or_serial() else None
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Check GMSH version
+vers = np.genfromtxt(file,comments='$',max_rows=1) if pyQvarsi.utils.is_rank_or_serial() else None
+vers = pyQvarsi.utils.mpi_bcast(vers)
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| GMSH file version <%.1f>.'%vers[0])
+pyQvarsi.pprint(0,'--|',flush=True)
+if not vers[0] == 2.2: pyQvarsi.raiseError('This parser can only understand version 2.2 of the Gmsh file format')
+# At this point we have checked that the file version is 2.2
+
+# Read the number of zones
+nzones = int(np.genfromtxt(file,comments='$',max_rows=1))
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Detected <%d> physical names. Reading... '%nzones,end='',flush=True)
+# Read from file
+data = np.genfromtxt(file,dtype=('i8','i8','<U256'),comments='$',max_rows=nzones)
+# Generate a dictionary containing the boundary information
+zones = {
+	'name'  : np.array([z['f2'].replace('"','') for z in data] if data.ndim > 0 else [data['f2'].tolist().replace('"','')]),
+	'code'  : np.array([z['f1'] for z in data] if data.ndim > 0 else [data['f1'].tolist()]),
+	'dim'   : np.array([z['f0'] for z in data] if data.ndim > 0 else [data['f0'].tolist()]),
+	'isbc'  : np.array([z['f0'] != dim_id for z in data] if data.ndim > 0 else [data['f0'].tolist() != dim_id]),
+	'isper' : np.zeros((nzones,),dtype=bool),
+}
+del data
+# Build periodicity
+zones['isper'] = [True if zones['code'][iz] in args.periodic else False for iz in range(nzones)]
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+# Failsafes
+if np.sum(np.logical_not(zones['isbc'])) > 1: 
+	pyQvarsi.raiseError('More than one interior zone is not supported!')
+
+# Now read the number of nodes
+pyQvarsi.cr_start('gmsh2pyQvarsi.nodes',0)
+nnodes = int(np.genfromtxt(file,comments='$',max_rows=1))
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Detected <%d> nodes.'%nnodes,flush=True)
+# Read the number of nodes in batches and write the COORD file
+pyQvarsi.pprint(0,'--| Reading nodes... ',end='',flush=True)
+# Read from text file
+xyz = np.genfromtxt(file,comments='$',max_rows=nnodes)[:,1:dim_id+1].astype(np.double)
+for idim in range(dim_id):
+	xyz[:,idim] *= args.scale[idim]
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+pyQvarsi.cr_stop('gmsh2pyQvarsi.nodes',0)
+
+# Now read the number of elements
+pyQvarsi.cr_start('gmsh2pyQvarsi.elements',0)
+nelems = int(np.genfromtxt(file,comments='$',max_rows=1))
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Detected <%d> elements in total.'%nelems,flush=True)
+# Boundary and interior elements are stored now consecutively, however,
+# at this point we do not know how many of them are present.
+#
+# We will allocate a memory space for each one of them and we will store
+# them as we read by chunks.
+pyQvarsi.pprint(0,'--| Scan for boundary and interior elements.',flush=True)
+id_interior  = int(zones['code'][np.logical_not(zones['isbc'])])
+nel_interior, nel_boundary = 0, 0
+lnods_ndim, lnodb_ndim     = 0, 0
+nbatchi, nbatchb           = 0, 0
+# Read the number of elements in batches 
+pyQvarsi.pprint(0,'--| Reading elements... ',end='',flush=True)
+# Read from text file
+iel_interior, iel_boundary = 0, 0
+eltyi = -np.ones((nelems,),np.int32)
+#eltyb = -np.ones((nelems,),np.int32)
+#codeb = -np.ones((nelems,),np.int32)
+lnods = np.zeros((nelems,64),np.int32) # 64 as the maximum order element that we can have
+#lnodb = np.zeros((nelems,64),np.int32) # 64 as the maximum order element that we can have
+# Read the file line by line
+for iline in range(nelems):
+	# Read one line
+	linestr = file.readline()
+	line    = np.array([int(l) for l in linestr.split()])
+	# Parse line
+	eltype = line[1]
+	elkind = line[3]
+	conec  = line[5:]
+	# Skip the element in case of periodicity
+	if elkind in args.periodic: continue
+	# We need to find we are interior or boundary
+	if elkind == id_interior:
+		# Interior element
+		eltyi[iel_interior]             = gsmh2AlyaCellTypes[eltype]
+		lnods[iel_interior,:len(conec)] = conec
+		lnods_ndim                      = max(lnods_ndim,gsmh2Nodes[eltype])
+		iel_interior                   += 1
+	else:
+		# Boundary element
+#		eltyb[iel_boundary]             = gsmh2AlyaCellTypes[eltype]
+#		lnodb[iel_boundary,:len(conec)] = conec
+#		codeb[iel_boundary]             = elkind				
+#		lnodb_ndim                      = max(lnodb_ndim,gsmh2Nodes[eltype])
+		iel_boundary                   += 1
+# Finish the read
+nel_interior += iel_interior
+nel_boundary += iel_boundary
+# Get rid of unwanted interior points
+to_keep = eltyi != -1
+eltyi   = eltyi[to_keep]
+lnods   = lnods[to_keep,:]
+# Get rid of unwanted boundary points
+#to_keep = eltyb != -1
+#eltyb   = eltyb[to_keep]
+#lnodb   = lnodb[to_keep,:]
+#codeb   = codeb[to_keep]
+pyQvarsi.pprint(0,'done!')
+file.close()
+pyQvarsi.pprint(0,'--|',flush=True)
+pyQvarsi.pprint(0,'--| Found <%d> elements and <%d> boundary elements.'%(nel_interior,nel_boundary),flush=True)
+pyQvarsi.cr_stop('gmsh2pyQvarsi.elements',0)
+
+# Generate pyQvarsi mesh
+pyQvarsi.pprint(0,'--| Writing output <%s>... '%args.out_file,end='',flush=True)
+ptable = pyQvarsi.PartitionTable.new(1,nelems=nel_interior,npoints=nnodes)
+mesh   = pyQvarsi.Mesh(xyz,lnods[:,:lnods_ndim]-1,eltyi,np.arange(nnodes,dtype=np.int32),np.arange(nel_interior,dtype=np.int32),
+			ptable=ptable,compute_massMatrix=False, serial=True)
+mesh.save(args.out_file)
+pyQvarsi.pprint(0,'done!')
+
+# Close and say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_stop('gmsh2pyQvarsi',0)
+pyQvarsi.cr_info()

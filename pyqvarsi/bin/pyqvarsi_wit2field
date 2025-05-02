@@ -1,0 +1,178 @@
+#!/usr/bin/env python
+#
+# Generate HDF5 field files from witness points
+#
+# Usage
+#	Reads header:
+#		pyQvarsi-wit2field <witness file> -v <variable name/s> -o <out file>
+#	Skips header:
+#		pyQvarsi-wit2field <witness file> -v <variable id/s> -n <number of witness points> -o <out file>
+#
+# Arnau Miro, Manel Soria (DFIS) UPC-ESEIAAT (2017)
+# Rev: 22/06/2021
+from __future__ import print_function
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+
+## Argument parser
+argpar = argparse.ArgumentParser(prog="pyQvarsi_wit2field",description="Converts Alya witness files to pyQvarsi Fields for a given witness point")
+argpar.add_argument("wit_file",type=str,help="name of the Alya case")
+argpar.add_argument("-o","--output",required=True,type=str,help="name of the output binary file",dest="out_file")
+argpar.add_argument("-v","--variable",required=True,type=str,help="variable name to be parsed, separated by commas",dest="varname")
+argpar.add_argument("-w","--witness",type=int,help="witness point to parse",dest="iwit")
+argpar.add_argument("-n","--nwitness",type=int,help="number of witness points (skips header)",dest="nprobes")
+argpar.add_argument("-bf","--brute-force",action='store_true',help="brute force algorithm (slow)",dest="isbf")
+
+args = argpar.parse_args()
+
+
+## Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi-wit2field |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Converts Alya witness files to pyQvarsi Fields for a given witness point.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Read header
+if not args.nprobes:
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Reading <%s> header.' % args.wit_file)
+	pyQvarsi.pprint(0,'--|',flush=True)
+	file   = open(args.wit_file,'r')
+	ignore = True # Ingore flag
+	nline  = 0    # counter for lines
+	varid  = []
+	for line in file:
+		if 'START' in line.rstrip(): break # Stop when header is finished
+		if not ignore: # Start parsing header
+			pline = line.rstrip().split() # Parsed line, separated by whitespaces
+			if 'NUMVARIABLES' in pline[1]:     nvars = int(pline[-1])       # Number of variables
+			if 'NUMSETS'      in pline[1]:     nwit  = int(pline[-1])       # Number of witness points
+			if pline[1]       in args.varname: varid.append(int(pline[-1])-1) # Variables to be parsed
+		if 'HEADER' in line.rstrip(): ignore = False
+		nline += 1
+		if nline > 100:
+			pyQvarsi.pprint(0,'--| Something went wrong! Aborting...',flush=True)
+			pyQvarsi.utils.raiseError('Too many header lines (%d)!'%nline)
+	# Display some meta info
+	pyQvarsi.pprint(0,'--| Found %d variables and %d witness points.' % (nvars,nwit),flush=True)
+else:
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Skipping <%s> header.' % args.wit_file)
+	pyQvarsi.pprint(0,'--|',flush=True)
+	nwit  = args.nprobes
+	varid = [int(var) for var in args.varname.split(',')]
+	nvars = len(varid)
+	file  = open(args.wit_file,'r')
+
+
+## Reading algorithm
+if not args.isbf: # Optimized parsing algorithm
+	# Read last instant
+	ns = int( os.popen('head -n %d %s | grep Iterations' % (nwit+nvars+5,args.wit_file)).readline().rstrip().split()[3] )
+	nf = int( os.popen('tail -n %d %s | grep Iterations' % (nwit+2,args.wit_file)).readline().rstrip().split()[3] )
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Starting at %d and ending at %d.' % (ns,nf))
+	pyQvarsi.pprint(0,'--|',flush=True)
+	# Number of lines
+	ni     = nf - ns
+	nlines = ni*(nwit+2)
+	# Continue reading
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Reading witness data...',flush=True)
+	nline = 0 # counter for lines
+	ii    = 0 # counter for instants
+	jj    = 0 # counter for probes
+	time = np.zeros(ni,dtype=np.double)
+	data = np.zeros((ni,nwit,len(varid)),dtype=np.double)
+	for line in file:
+		if ii > ni: break
+		pline = line.rstrip().split() # Parsed line, separated by whitespaces
+		try:
+			if pline[0] != '#':
+				# Data
+				vline = np.array(pline,np.double)
+				data[ii-1,jj,:] = vline[varid]
+				jj += 1 
+			if 'Time' in pline[1]:
+				# Time
+				time[ii-1] = np.double(pline[3]) 
+			if 'Iterations' in pline[1]: 
+				# Counters
+				ii += 1
+				jj  = 0 
+		except:
+			pyQvarsi.pprint(0,'--| Error:', end='')
+			pyQvarsi.pprint(0,line)
+			pyQvarsi.pprint(0,'--| Aborted in iteration %d!' % (ii),flush=True)
+			file.close()
+			pyQvarsi.utils.raiseError('Error reading <%s>!'%args.wit_file)
+		if nline % (202*1e3) == 0: 
+			print('--|                      %.2f%%' % ( (float(ii)/ni)*100 ),flush=True)
+		nline += 1
+	file.close() # Close file
+	pyQvarsi.pprint(0,'--|                      100%')
+	pyQvarsi.pprint(0,'--| done.',flush=True)
+else: # Brute force algorithm
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Warning! Brute force approach. Might be slow...')
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Please be patient.')
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Reading probe data...',flush=True)
+	nline = 0 # counter for lines
+	ii    = 0 # counter for instants
+	jj    = 0 # counter for probes
+	time  = []#np.zeros([],dtype=np.double)
+	data  = []#np.zeros([],dtype=np.double)
+	for line in file:
+		pline = line.rstrip().split() # Parsed line, separated by whitespaces
+		if pline[0] != '#':
+			# Data
+			data[ii-1].append(len(varid)*[''])
+			vline = np.array(pline,np.double)
+			data[ii-1][jj] = vline[varid]
+			jj += 1
+		if 'Time' in pline[1]: 
+			# Time
+			time.append(np.double(pline[3]))
+		if 'Iterations' in pline[1]:
+			# Counters
+			ii += 1
+			jj  = 0
+			data.append([])
+		if nline % (202*1e3) == 0: 
+			pyQvarsi.pprint(0,'--|                 line %d' % ii,flush=True)
+		nline += 1
+	file.close() # Close file
+	pyQvarsi.pprint(0,'--| done.',flush=True)
+	ni   = ii-1
+	time = np.array(time,np.double)
+	data = np.array(data,np.double)
+	nwit = data.shape[1]
+
+
+## Store each witness as a separate field
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Writing Field file <%s>... ' % args.out_file)
+pyQvarsi.pprint(0,'--|',flush=True)
+outname, outext = os.path.splitext(args.out_file)
+metadata = {'npoints':[nwit,int]}
+for iwit in range(nwit):
+	# Skip if a specific witness has been requested
+	if args.iwit and not iwit == (args.iwit-1): continue
+	# Create field
+	field = pyQvarsi.Field(xyz=np.array([[0.,0.,0.]],dtype=np.double),TIME=time)
+	for ivar,var in enumerate(args.varname.split(',')):
+		field[var] = data[:,iwit,ivar]
+	# Store field
+	field.save('%s_%d%s'%(outname,iwit+1,outext),metadata=metadata)
+pyQvarsi.pprint(0,'--| done.',flush=True)
+
+
+## Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)

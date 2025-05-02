@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, MPIO to DAT.
+#
+# From new MPIO format to old DAT format.
+#
+# Last rev: 21/11/2022
+from __future__ import print_function, division
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+Alya2Nodes = {
+	2  : 2, #1: 2-node line.
+	10 : 3, #2: 3-node triangle.
+	12 : 4, #3: 4-node quadrangle.
+	30 : 4, #4: 4-node tetrahedron.
+	37 : 8, #5: 8-node hexahedron.
+	34 : 6, #6: 6-node prism.
+	32 : 5, #7: 5-node pyramid.
+	39 : 27, #12: 27-node second order hexahedron (8 nodes associated with the vertices, 12 with the edges, 6 with the faces and 1 with the volume).
+	40 : 64, #HEX-64
+}
+
+
+## Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_mpio2dat', description='From new MPIO format to old DAT format')
+argpar.add_argument('-c','--case',type=str,help='source case name',dest='src_case')
+argpar.add_argument('-s','--size',type=int,help='maximum size of the data block to read',dest='size')
+argpar.add_argument('target',type=str,help='target case name')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.src_case: args.src_case = args.target
+default_size = True if not args.size else False
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_mpio2dat |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| From new MPIO format to old DAT format.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Parameters
+GEOFILE  = '%s.geo.dat' % args.target
+BOUFILE  = '%s.fix.bou' % args.target
+
+
+## Obtain number of nodes and number of elements
+fname  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'LTYPE')
+header = pyQvarsi.io.AlyaMPIO_header.read(fname)
+nelem  = header.npoints
+fname  = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'COORD')
+header = pyQvarsi.io.AlyaMPIO_header.read(fname)
+nnod   = header.npoints
+relem  = nelem if default_size else args.size
+rnod   = nnod  if default_size else args.size
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Source mesh has <%d> nodes and <%d> elements |-- '%(nnod,nelem))
+pyQvarsi.pprint(0,'--| Reading in batches of <%d> nodes and <%d> elements |-- '%(rnod,relem))
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Write GEO file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Writing <%s>: |-- '%(GEOFILE),flush=True)
+file = open(GEOFILE,'w')
+
+# Write nodes per element (LTYPE)
+pyQvarsi.pprint(0,'--|   Nodes per element...',end='',flush=True)
+fname   = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'LTYPE')
+file.write('NODES_PER_ELEMENT\n')
+# Read by chunks
+for ichunk in range(int(np.ceil(nelem/relem))):
+	nread = min(relem,nelem-ichunk*relem)
+	ltype,_ = pyQvarsi.io.AlyaMPIO_readByChunk_serial(fname,nread,ichunk*relem)
+	for ielem in range(ltype.shape[0]):
+		file.write('%d %d\n'%(ielem+1,Alya2Nodes[ltype[ielem]]))
+del ltype
+pyQvarsi.pprint(0,'done!',flush=True)
+
+# Write connectivity
+pyQvarsi.pprint(0,'--|   Connectivity...',end='',flush=True)
+fname   = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'LNODS')
+file.write('ELEMENTS\n')
+# Read by chunks
+for ichunk in range(int(np.ceil(nelem/relem))):
+	nread = min(relem,nelem-ichunk*relem)
+	lnods,_ = pyQvarsi.io.AlyaMPIO_readByChunk_serial(fname,nread,ichunk*relem)
+	for ielem in range(lnods.shape[0]):
+		file.write('%d'%(ielem+1))
+		for inod in range(lnods.shape[1]):
+			file.write(' %d'%(lnods[ielem,inod]))
+		file.write('\n')
+file.write('END_ELEMENTS\n')
+del lnods
+pyQvarsi.pprint(0,'done!',flush=True)
+
+# Write coordinates
+pyQvarsi.pprint(0,'--|   Coordinates...',end='',flush=True)
+fname   = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'COORD')
+file.write('COORDINATES\n')
+# Read by chunks
+for ichunk in range(int(np.ceil(nnod/rnod))):
+	nread = min(rnod,nnod-ichunk*rnod)
+	coord,_ = pyQvarsi.io.AlyaMPIO_readByChunk_serial(fname,nread,ichunk*rnod)
+	for inod in range(coord.shape[0]):
+		file.write('%d'%(inod+1))
+		for idim in range(coord.shape[1]):
+			file.write(' %f'%(coord[inod,idim]))
+		file.write('\n')
+file.write('END_COORDINATES\n')
+del coord
+pyQvarsi.pprint(0,'done!',flush=True)
+
+
+# Write boundaries
+pyQvarsi.pprint(0,'--|   Boundaries...',end='',flush=True)
+fname   = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'LNODB')
+file.write('BOUNDARIES\n')
+if os.path.exists(fname):
+	lnodb,_ = pyQvarsi.io.AlyaMPIO_read_serial(fname)
+	for ielem in range(lnodb.shape[0]):
+		file.write('%d'%(ielem+1))
+		for inod in range(lnodb.shape[1]):
+			file.write(' %d'%(lnodb[ielem,inod]))
+		file.write('\n')
+	del lnodb
+file.write('END_BOUNDARIES\n')
+pyQvarsi.pprint(0,'done!',flush=True)
+
+# Write skew systems
+file.write('SKEW_SYSTEMS\n')
+file.write('END_SKEW_SYSTEMS\n')
+
+# Close file
+file.close()
+pyQvarsi.pprint(0,'--| done!',flush=True)
+
+
+## Write BOU file
+fname   = pyQvarsi.io.MPIO_AUXFILE_S_FMT % (args.src_case,'CODBO')
+if os.path.exists(fname):
+	pyQvarsi.pprint(0,'--|')
+	pyQvarsi.pprint(0,'--| Writing <%s>... '%(BOUFILE),end='',flush=True)
+	file = open(BOUFILE,'w')
+	codbo,_ = pyQvarsi.io.AlyaMPIO_read_serial(fname)
+	for ielem in range(codbo.shape[0]):
+		file.write('%d %d\n'%(ielem+1,codbo[ielem]))
+	del codbo
+	# Close file
+	file.close()
+	pyQvarsi.pprint(0,'done!',flush=True)
+
+## Finish and say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

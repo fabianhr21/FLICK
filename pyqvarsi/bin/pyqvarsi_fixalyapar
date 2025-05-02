@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, fix alyapar.
+#
+# Fixes empty partitions in alyapar files.
+#
+# Last rev: 05/08/2021
+from __future__ import print_function, division
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+from pyQvarsi.inp_out.AlyaMPIO import writePartitions
+
+## Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_fixalyapar', description='Fixes empty partitions in alyapar files')
+argpar.add_argument('casename',type=str,help='Case name')
+argpar.add_argument('-p','--path',type=str,help='Path to the case',dest='path')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.path: args.path = './'
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_fixalyapar |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Fixes empty partitions in alyapar files.')
+pyQvarsi.pprint(0,'--|',flush=True)
+parfile = os.path.join(args.path,pyQvarsi.io.MPIO_PARTFILE_FMT % args.casename)
+
+# Read alyapar file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Reading alyapar file <%s>... '%parfile,end='',flush=True)
+partition_data = np.genfromtxt(parfile,skip_header=1)
+pyQvarsi.pprint(0,'done!',flush=True)
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Obtain lines that are not empty
+new_part_data = partition_data[partition_data[:,1] != 0]
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Found %d empty lines. '%(partition_data.shape[0]-new_part_data.shape[0]))
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Fix partition file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Fixing... ',end='',flush=True)
+new_part_data[:,0] = np.array([ii + 1 for ii in range(new_part_data.shape[0])])
+pyQvarsi.pprint(0,'done!',flush=True)
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Store new file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Writing new alyapar file <%s>... '%(parfile+'.clean'),end='',flush=True)
+writePartitions(parfile+'.clean',new_part_data)
+pyQvarsi.pprint(0,'done!',flush=True)
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+## Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

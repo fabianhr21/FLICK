@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, MPIO header viewwer.
+#
+# View and modify Alya MPIO headers.
+#
+# Last rev: 24/09/2021
+from __future__ import print_function, division
+
+# Please do not delete this part otherwise it will not work
+# you have been warned after a long weekend of debugging
+import mpi4py
+mpi4py.rc.recv_mprobe = False
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+
+# Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_header', description='View and modify Alya MPIO headers')
+argpar.add_argument('filename',type=str,help='File name')
+argpar.add_argument('--object',type=str,help='MPIO field name')
+argpar.add_argument('--dimension',type=str,help='MPIO dimensions (SCALA/VECTO/MATRI)')  # SCALA00/VECTO00/MATRI00
+argpar.add_argument('--resultson',type=str,help='MPIO association (NPOIN/NELEM/NBOUN)') # NELEM00/NPOIN00/NBOUN00
+argpar.add_argument('--type',type=str,help='MPIO data type (INTEG/REAL)')               # INTEG00/REAL000
+argpar.add_argument('--size',type=str,help='MPIO data size (4BYTE/8BYTE)')              # 4BYTE00/8BYTE00
+argpar.add_argument('--sequence',type=str,help='MPIO parallel or serial (SEQUE/PARAL)') # SEQUE00/PARAL00
+argpar.add_argument('--filter',type=str,help='MPIO filtering (FILTE/NOFIL)')            # FILTE00/NOFIL00
+argpar.add_argument('--sorting',type=str,help='MPIO sorting (ASCEN/DESCE/NONE)')        # ASCEN00/DESCE00/NONE000
+argpar.add_argument('--id',type=str,help='MPIO id (ID/NOID)')                           # ID00000/NOID000
+argpar.add_argument('--columns',type=int,help='MPIO number of columns')
+argpar.add_argument('--lines',type=int,help='MPIO number of lines')
+argpar.add_argument('--tstepno',type=int,help='MPIO timestep number')
+argpar.add_argument('--nsubdom',type=int,help='MPIO number of subdomains')
+argpar.add_argument('--division',type=int,help='MPIO division')
+argpar.add_argument('--tag1',type=int,help='MPIO tag1')
+argpar.add_argument('--tag2',type=int,help='MPIO tag2')
+argpar.add_argument('--time',type=float,help='MPIO simulation time')
+
+# Parse inputs
+args = argpar.parse_args()
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_header |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| View and modify Alya MPIO headers.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Read and print header file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Reading the header of <%s>... '%(args.filename),end='',flush=True)
+header = pyQvarsi.io.AlyaMPIO_header.read(args.filename)
+pyQvarsi.pprint(0,'done!',flush=True)
+pyQvarsi.pprint(0,'--| Printing:')
+pyQvarsi.pprint(0,header,flush=True)
+
+# Modify header if requested by the user
+modified = False
+if args.object:    header.header['Object']    = args.object;    modified = True
+if args.dimension: header.header['Dimension'] = args.dimension; modified = True
+if args.resultson: header.header['ResultsOn'] = args.resultson; modified = True
+if args.type:      header.header['Type']      = args.type;      modified = True
+if args.size:      header.header['Size']      = args.size;      modified = True
+if args.sequence:  header.header['Sequence']  = args.sequence;  modified = True
+if args.filter:    header.header['Filter']    = args.filter;    modified = True
+if args.sorting:   header.header['Sorting']   = args.sorting;   modified = True
+if args.id:        header.header['Id']        = args.id;        modified = True
+if args.columns:   header.header['Columns']   = args.columns;   modified = True
+if args.lines:     header.header['Lines']     = args.lines;     modified = True
+if args.tstepno:   header.header['TstepNo']   = args.tstepno;   modified = True
+if args.nsubdom:   header.header['NSubdom']   = args.nsubdom;   modified = True
+if args.division:  header.header['Division']  = args.division;  modified = True
+if args.tag1:      header.header['Tag1']      = args.tag1;      modified = True
+if args.tag2:      header.header['Tag2']      = args.tag2;      modified = True
+if args.time:      header.header['Time']      = args.time;      modified = True
+
+# If modified, write and print the header 
+if modified:
+	pyQvarsi.pprint(0,'--| Updating the header of <%s>... '%(args.filename),end='',flush=True)
+	pyQvarsi.io.AlyaMPIO_writeHeader(args.filename,header)
+	pyQvarsi.pprint(0,'done!',flush=True)
+	pyQvarsi.pprint(0,'--| Printing:')
+	pyQvarsi.pprint(0,header,flush=True)
+
+# Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

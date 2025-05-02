@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, ensi2bin.
+#
+# Ensight gold binary file converter.
+#
+# Last rev: 05/08/2021
+from __future__ import print_function, division
+
+import os, argparse, numpy as np
+import pyQvarsi
+
+
+## Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_ensi2bin', description='Convert EnsightGold ASCII to binary')
+argpar.add_argument('casename',type=str,help='EnsightGold case name')
+argpar.add_argument('-p','--path',type=str,help='Path to EnsightGold case name',dest='path')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.path: args.path = './'
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_ensi2bin |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Ensight gold binary file converter.')
+pyQvarsi.pprint(0,'--|',flush=True)
+casefilename = args.path,'%s.ensi.case' % args.casename
+geofilename  = args.path,'%s.ensi.geo'  % args.casename
+
+
+## Read Ensight casefile
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Reading EnsightGold case file <%s>... '%casefilename,end='',flush=True)
+varList, timesteps = pyQvarsi.io.Ensight_readCase(os.path.join(args.path,casefilename))
+pyQvarsi.pprint(0,'done!',flush=True)
+pyQvarsi.pprint(0,'--| Found %d variables and %d time instants.'%(len(varList),timesteps.shape[0]))
+pyQvarsi.pprint(0,'--|',flush=True)
+
+
+# Convert geometry file
+pyQvarsi.pprint(0,'--| Converting geo file... ',end='',flush=True)
+xyz, conec, header = pyQvarsi.io.Ensight_readGeo(os.path.join(args.path,geofilename))
+header['nodeID'] = 'assign'
+header['elemID'] = 'assign'
+pyQvarsi.io.Ensight_writeGeo(os.path.join(args.path,geofilename),xyz,conec,header)
+pyQvarsi.pprint(0,'done!',flush=True)
+
+
+# Convert instants
+for it in range(timesteps.shape[0]):
+	print('--| Converting instant %d, t %.3f - '%(it+1,timesteps[it]),end='',flush=True)
+	for var in varList:
+		filename = os.path.join(args.path,var['file'].replace(var['file'].split('-')[-1],'%%0%dd'%var['file'].count('*')))
+		field, header = pyQvarsi.io.Ensight_readField(filename%(it+1),var['dims'],xyz.shape[0])
+		pyQvarsi.io.Ensight_writeField(filename%(it+1),field,header)
+	print('done!',flush=True)
+
+
+# Rewrite casefile
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Writing EnsightGold case file <%s>... '%casefilename,end='',flush=True)
+pyQvarsi.io.Ensight_writeCase(os.path.join(args.path,casefilename),geofilename,varList,timesteps)
+pyQvarsi.pprint(0,'done!',flush=True)
+
+
+## Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()

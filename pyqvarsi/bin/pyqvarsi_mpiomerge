@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+#
+# pyQvarsi, MPIO Merge to serial.
+#
+# Merge parallel MPIO files to serial
+#
+# Last rev: 09/05/2023
+from __future__ import print_function, division
+
+# Please do not delete this part otherwise it will not work
+# you have been warned after a long weekend of debugging
+import mpi4py
+mpi4py.rc.recv_mprobe = False
+
+import os, argparse, numpy as np, glob
+import pyQvarsi
+
+
+## Argparse
+argpar = argparse.ArgumentParser(prog='pyQvarsi_mpiomerge', description='Merge parallel MPIO files to serial')
+argpar.add_argument('-c','--casename',required=True,type=str,help='Name of the case for MPIO',dest='casename')
+argpar.add_argument('--basedir',type=str,help='base directory where to output the data (default: ./)',dest='basedir')
+argpar.add_argument('infile',type=str,help='Name of the file to merge')
+argpar.add_argument('outfile',type=str,help='Name of the output file')
+
+# Parse inputs
+args = argpar.parse_args()
+if not args.basedir: args.basedir = './'
+
+# Print info in screen
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| pyQvarsi_mpiomerge |-- ')
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Merge parallel MPIO files to serial.')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Load Mesh in MPIO format
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Opening mesh <%s>... '%args.casename,end='',flush=True)
+fname   = os.path.join(args.basedir,pyQvarsi.io.MPIO_AUXFILE_P_FMT%(args.casename,'LNINV'))
+lninv,_ = pyQvarsi.io.AlyaMPIO_read_serial(fname)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Create a mask using lninv to filter the nodes that are repeated and
+# to obtain  the correct node ordering
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Creating merge mask... ',end='',flush=True)
+_, mask = np.unique(lninv,return_index=True)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Serialize parallel file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Processing file <%s>... '%args.infile,end='',flush=True)
+# First read the input file in serial mode
+array,header = pyQvarsi.io.AlyaMPIO_read_serial(args.infile)
+# Convert it to serial
+array = array[mask]
+# Fix the header
+header.header['Sequence'] = 'SEQUE'
+header.header['Lines']    = len(mask)
+header.header['NSubdom']  = 1
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Output file
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Output file <%s>... '%args.outfile,end='',flush=True)
+pyQvarsi.io.AlyaMPIO_write_serial(args.outfile,array,header)
+pyQvarsi.pprint(0,'done!')
+pyQvarsi.pprint(0,'--|',flush=True)
+
+# Say goodbye
+pyQvarsi.pprint(0,'--|')
+pyQvarsi.pprint(0,'--| Bye!',flush=True)
+pyQvarsi.cr_info()
