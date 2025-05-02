@@ -1,0 +1,79 @@
+name: build
+
+on:
+  push:
+  pull_request:  
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 6 1 * *' # Run on the first day of every month at 06:00 UTC
+
+jobs:
+  build_linux_latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install libgmp-dev libmpfr-dev libboost-all-dev libeigen3-dev libomp-dev libgdal-dev
+      - name: Download CGAL 6.0.1
+        run: |
+            wget https://github.com/CGAL/cgal/releases/download/v6.0.1/CGAL-6.0.1-library.tar.xz -P ${{ github.workspace }}
+            cd ${{ github.workspace }}
+            tar -xvf CGAL-6.0.1-library.tar.xz
+      - name: Build
+        run: |
+            mkdir build && cd build
+            cmake .. -DCGAL_DIR=${{ github.workspace }}/CGAL-6.0.1 && make -j4
+
+  build_linux_2204:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install libgmp-dev libmpfr-dev libboost-all-dev libeigen3-dev libomp-dev libgdal-dev
+      - name: Download CGAL 6.0.1
+        run: |
+            wget https://github.com/CGAL/cgal/releases/download/v6.0.1/CGAL-6.0.1-library.tar.xz -P ${{ github.workspace }}
+            cd ${{ github.workspace }}
+            tar -xvf CGAL-6.0.1-library.tar.xz
+      - name: Build
+        run: |
+            mkdir build && cd build
+            cmake .. -DCGAL_DIR=${{ github.workspace }}/CGAL-6.0.1 && make -j4
+
+  build_macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+            brew update
+            brew upgrade || true
+            brew install cmake boost cgal eigen libomp gdal
+      - name: Build
+        run: |
+            mkdir build && cd build
+            cmake .. && make -j4
+
+  build_win64:
+    runs-on: windows-latest
+    if: false
+    steps:
+      - uses: actions/checkout@v3
+      - name: vcpkg build
+        uses: johnwason/vcpkg-action@v5
+        id: vcpkg
+        with:
+          pkgs: boost-program-options boost-geometry boost-locale boost-chrono boost-system boost-filesystem eigen3 cgal gdal
+          triplet: x64-windows-release
+          token: ${{ github.token }}
+          extra-args: --clean-after-build
+      - name: Build
+        run: |
+          mkdir Release
+          cd Release
+          cmake .. ${{ steps.vcpkg.outputs.vcpkg-cmake-config }} 
+          cmake --build . --parallel 4 --config Release
