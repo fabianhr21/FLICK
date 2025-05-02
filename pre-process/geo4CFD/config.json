@@ -1,0 +1,76 @@
+//-- CITY4CFD CONFIGURATION FILE --//
+{
+    "point_clouds":
+    {
+      "ground": "/home/fabianh/Qgis4CFD/automatization/Test_QGIS/clipped_ground.laz",
+      "buildings" : "/home/fabianh/Qgis4CFD/automatization/Test_QGIS/clipped_buildings.laz"
+    },
+    "polygons" : [ 
+      {
+        "type": "Building",
+        "path": "/home/fabianh/Qgis4CFD/automatization/Test_QGIS/osm_buildings.geojson",
+        "unique_id": "gid" ,                    // Optional - use building ID from the polygon file
+        "height_attribute": "height",          // Optional - use height from the polygon file for reconstruction
+        "floor_attribute":  "num_floors",      // Optional - use number of floors for reconstruction
+        "floor_height": 3,                     // Floor height, required if 'floor_attribute' is defined
+        "height_attribute_advantage": false,   // In case height attribute takes precedence over other reconstruction from point cloud
+        "avoid_bad_polys": false,              // Optional - ignore or try to reconstruct problematic (non-simple) polygons
+        "refine": false                        // Optional - refine surface
+      }
+    ],
+    "reconstruction_regions" : [
+      {
+        "influence_region": 200,                // Radius, Polygon points, imported polygon, or null for BPG
+        "lod":   "1.2",                         // LoD1.2, 1.3, or 2.2
+        "complexity_factor": 0.1,               // Graph cut optimisation bias for LoD1.3 and LoD2.2, required if those LoDs are chosen
+        "lod13_step_height": 3,                 // Optional - choose LoD1.3 minimum step height between roof faces in m
+        "validate":          true,             // Optional - do the geometric validity check and report on invalid buildings
+        "enforce_validity":  "lod1.2",          // Optional - fall back to LoD1.2 reconstruction or surface wrap in case the geometric validity check fails
+        "relative_alpha": 500,                  // Required when "enforce_validity": "surface_wrap"
+        "relative_offset": 1200,                // Required when "enforce_validity": "surface_wrap"
+        "skip_gap_closing":  false,             // Optional - skip open border check and simple gap closing in LoD1.3 and LoD2.2 reconstruction
+            // Optional - expand the influence region as 3*(max_dim + extra)
+        "import_advantage":  false              // Optional - whether imported or reconstructed take advantage in the region
+       }                        
+    ],
+
+  
+    //-- Domain dimensions 
+     "point_of_interest": [370074.86,2838786.50],
+    "domain_bnd":       null,            // Same as above
+    "top_height":       300,             // Doesn't matter if BPG are used for domain size
+    
+  
+    "buffer_region":    -20,             // Optional - buffer region size in percentage of distance to bndpoly centroid
+    "reconstruct_boundaries": true ,       // Optional - reconstruct sides and top of the domain, default: false
+    //- Arguments required only if using BPG
+    "bnd_type_bpg": "Rectangle",         // Round, Rectangle, Oval. Matters only if using BPG
+    "bpg_blockage_ratio": false,         // Optional - blockage ratio BPG. Can be set as 'true' for default, or as a number defining max allowed blockage ratio
+    "flow_direction":  [1, 0],           // Required for Rectangular and Oval domain, and Round with the blockage ratio
+    "bpg_domain_size": [1, 1, 1, 2],    // Optional - overwrites bpg distances from tallest building
+                                         // [front, sides, back, top] Rectangle/Ellipse, [sides, top] for round
+  
+    //- Terrain and building reconstruction 
+    "terrain_thinning": 80,              // Optional - percentage of randomly removed terrain points
+    "smooth_terrain": {                  // Optional - smoothing flag
+      "iterations": 1,                   //            number of smoothing iterations. Typical numbers are 1-10
+      "max_pts": 250000                  //            number of points after optimized thinning for smoothing 
+    },  
+    "flat_terrain":     false,           // Optional - make terrain flat
+  
+    "building_percentile": 90,
+    "min_height": 2,                     // Optional - define the minimum allowed height for buildilng reconstruction
+    "min_area": 50,                      // Optional - define the minimum allowed floorplan area for buildilng reconstruction
+    "reconstruct_failed": false,         // Optional - reconstruct buildings at minimum height if the reconstruction fails
+    "intersect_buildings_terrain": false,// Optional - make buildings protrude through terrain
+  
+    "edge_max_len": 5,
+  
+    //-- Output and log 
+    "output_file_name":  "mesh_mty_script-test",
+    "output_format":     "stl",
+    "output_separately": false,
+  
+    "output_log": true,         // Optional, also outputs GeoJSON file of building polygons that couldn't be reconstructed
+    "log_file":   "logFile.log" // Optional, defaults to 'log'
+  }
