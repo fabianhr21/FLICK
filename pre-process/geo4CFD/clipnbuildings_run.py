@@ -246,7 +246,7 @@ def main():
         # Check if input is a directory or file
     if args.input_dir:
         if os.path.isdir(args.input_dir):
-            laz_files = [os.path.join(args.input_dir, f) for f in os.listdir(args.input_dir) if f.endswith('.laz')]
+            laz_files = [os.path.join(args.input_dir, f) for f in os.listdir(args.input_dir) if (f.endswith('.laz') or f.endswith('.las'))]
             if not laz_files:
                 raise ValueError("No LAZ files found in the input directory.")
             # Merge LAZ files
