@@ -31,6 +31,8 @@ from shapely.ops import unary_union
 from shapely.prepared import prep
 import fiona
 from rtree import index
+import geopandas as gpd
+import json
 
 
 def has_short_edge(polygon, threshold=2.0):
@@ -41,14 +43,30 @@ def has_short_edge(polygon, threshold=2.0):
             return True
     return False
 
-def skip_short_edges(polygon, threshold=2.0):
-    coords = list(polygon.exterior.coords)
-    new_coords = []
-    for i in range(len(coords) - 1):
-        edge = LineString([coords[i], coords[i + 1]])
-        if edge.length >= threshold:
+# def skip_short_edges(polygon, threshold=0.5):
+#     coords = list(polygon.exterior.coords)
+#     new_coords = []
+#     for i in range(len(coords) - 1):
+#         edge = LineString([coords[i], coords[i + 1]])
+#         if edge.length >= threshold:
+#             new_coords.append(coords[i])
+#     new_coords.append(coords[-1])  # Add the last coordinate
+#     return Polygon(new_coords)
+
+def skip_short_edges(poly, threshold=2.0):
+    coords = list(poly.exterior.coords)
+    new_coords = [coords[0]]
+
+    for i in range(1, len(coords)):
+        dx = coords[i][0] - new_coords[-1][0]
+        dy = coords[i][1] - new_coords[-1][1]
+        if (dx**2 + dy**2)**0.5 >= threshold:
             new_coords.append(coords[i])
-    new_coords.append(coords[-1])  # Add the last coordinate
+
+    # A ring must have at least 4 coords (closed)
+    if len(new_coords) < 4:
+        return None  # señal para que el llamador lo descarte
+
     return Polygon(new_coords)
 
 def close_holes_in_polygons(polygons):
@@ -100,21 +118,149 @@ def determine_properties_from_components(components, polygon_data):
 
     return properties_values
 
-def process_polygons(input_filename, output_filename, buffer_size, apply_convex_hull=False, remove_holes=0,
-                     simplification_tol=0.):
+# def process_polygons(input_filename, output_filename, buffer_size, apply_convex_hull=False, remove_holes=0,
+#                      simplification_tol=0.):
+#     with fiona.open(input_filename, 'r') as input_src:
+#         input_schema = input_src.schema.copy()
+#         input_crs = input_src.crs
+
+#         output_schema = {
+#             'geometry': 'Polygon',
+#             'properties': input_schema['properties']
+#         }
+
+#         polygon_data = []
+#         for feature in input_src:
+#             geom = shape(feature['geometry'])
+#             properties = feature['properties']
+
+#             if isinstance(geom, Polygon):
+#                 polygon_data.append((geom, properties))
+#             elif isinstance(geom, MultiPolygon):
+#                 for poly in geom.geoms:
+#                     polygon_data.append((poly, properties))
+
+#         print("Buffering polygons...")
+#         buffered_polygons = [data[0].buffer(buffer_size, cap_style=3, join_style=2) for data in polygon_data]
+#         if remove_holes != 0:
+#             buffered_polygons = close_holes_in_polygons(buffered_polygons)
+
+#         print("Dissolving polygons...")
+#         dissolved_polygons = unary_union(buffered_polygons).buffer(-buffer_size, buffer_size, cap_style=2, join_style=2)
+
+#         if remove_holes == 2:  # additional pass to remove any new holes created
+#             if isinstance(dissolved_polygons, MultiPolygon):
+#                 dissolved_polygons = MultiPolygon(close_holes_in_polygons(dissolved_polygons.geoms))
+#             else:
+#                 dissolved_polygons = close_holes_in_polygons([dissolved_polygons])[0]
+
+#         new_properties_values = determine_properties_from_components(dissolved_polygons, polygon_data)
+
+#         polygons_to_write = []
+
+#         # if apply_convex_hull:
+#         #     print("Extracting convex hull...")
+#         #     if isinstance(dissolved_polygons, MultiPolygon):
+#         #         convex_hulls = [polygon.convex_hull for polygon in dissolved_polygons.geoms]
+#         #     else:
+#         #         convex_hulls = [dissolved_polygons.convex_hull]
+
+#         #     polygon_data = list(zip(convex_hulls, new_properties_values))
+#         #     merged_hulls = unary_union(convex_hulls) # chulls need an extra dissolve pass as it can introduce overlaps
+#         #     new_properties_values = determine_properties_from_components(merged_hulls, polygon_data)
+
+#         #     if isinstance(merged_hulls, MultiPolygon):
+#         #         polygons_to_write = list(zip(list(merged_hulls.geoms), new_properties_values))
+#         #     else:
+#         #         polygons_to_write = list(zip([merged_hulls], new_properties_values))
+#         # else:
+#         #     if isinstance(dissolved_polygons, MultiPolygon):
+#         #         polygons_to_write = list(zip(list(dissolved_polygons.geoms), new_properties_values))
+#         #     else:
+#         #         polygons_to_write = list(zip([dissolved_polygons], new_properties_values))
+
+
+
+
+
+#         if apply_convex_hull:
+#             print("Extracting conditional convex hulls...")
+
+#             if isinstance(dissolved_polygons, MultiPolygon):
+#                 polygons = dissolved_polygons.geoms
+#             else:
+#                 polygons = [dissolved_polygons]
+
+#             updated_polygons = []
+#             for poly in polygons:
+#                 if has_short_edge(poly, threshold=0.5):
+#                     updated_polygons.append(poly.convex_hull)
+#                 else:
+#                     updated_polygons.append(poly)
+
+#             polygon_data = list(zip(updated_polygons, new_properties_values))
+
+#             # Perform a union in case convex hull introduced overlaps
+#             merged_polygons = unary_union(updated_polygons)
+#             new_properties_values = determine_properties_from_components(merged_polygons, polygon_data)
+
+#             if isinstance(merged_polygons, MultiPolygon):
+#                 polygons_to_write = list(zip(list(merged_polygons.geoms), new_properties_values))
+#             else:
+#                 polygons_to_write = list(zip([merged_polygons], new_properties_values))
+
+#         else:
+#             if isinstance(dissolved_polygons, MultiPolygon):
+#                 dissolved_polygons = MultiPolygon([skip_short_edges(poly, threshold=2.0) for poly in dissolved_polygons.geoms]) #
+#                 polygons_to_write = list(zip(list(dissolved_polygons.geoms), new_properties_values))
+#             else:
+#                 polygons_to_write = list(zip([dissolved_polygons], new_properties_values))
+
+
+#         print("Writing new polygons to file...")
+#         with fiona.open(output_filename, 'w', 'GeoJSON', output_schema, crs=input_crs) as output_src:
+#             for polygon, properties in polygons_to_write:
+#                 final_properties = dict(input_src[0]['properties'])
+#                 final_properties.update(properties)
+
+#                 if simplification_tol > 0.:
+#                     polygon = polygon.simplify(simplification_tol)
+
+#                 feature = {'geometry': mapping(polygon), 'properties': final_properties}
+#                 output_src.write(feature)
+
+#         print("End")
+
+import fiona
+import json
+from shapely.geometry import shape, mapping, Polygon, MultiPolygon
+from shapely.ops import unary_union
+
+def process_polygons(input_filename, output_filename, buffer_size, apply_convex_hull=False, remove_holes=0, simplification_tol=0.):
+    # 1. Leer crs original del GeoJSON
+    with open(input_filename, 'r') as f:
+        original = json.load(f)
+        crs_block = original.get("crs")
+        if not crs_block:
+            raise ValueError("Input GeoJSON has no CRS block defined.")
+
+    print("CRS block (to preserve):", crs_block)
+
+    # 2. Leer datos con Fiona
     with fiona.open(input_filename, 'r') as input_src:
         input_schema = input_src.schema.copy()
         input_crs = input_src.crs
-
-        output_schema = {
-            'geometry': 'Polygon',
-            'properties': input_schema['properties']
-        }
+        print("Input CRS (Fiona format):", input_crs)
+        print("Input schema:", input_schema)
 
         polygon_data = []
-        for feature in input_src:
+        first_feature_props = None
+
+        for i, feature in enumerate(input_src):
             geom = shape(feature['geometry'])
             properties = feature['properties']
+            if i == 0:
+                first_feature_props = dict(properties)
 
             if isinstance(geom, Polygon):
                 polygon_data.append((geom, properties))
@@ -122,96 +268,74 @@ def process_polygons(input_filename, output_filename, buffer_size, apply_convex_
                 for poly in geom.geoms:
                     polygon_data.append((poly, properties))
 
-        print("Buffering polygons...")
-        buffered_polygons = [data[0].buffer(buffer_size, cap_style=3, join_style=2) for data in polygon_data]
-        if remove_holes != 0:
-            buffered_polygons = close_holes_in_polygons(buffered_polygons)
+    print("Buffering polygons...")
+    buffered_polygons = [geom.buffer(buffer_size, cap_style=3, join_style=2) for geom, _ in polygon_data]
+    if remove_holes != 0:
+        buffered_polygons = close_holes_in_polygons(buffered_polygons)
 
-        print("Dissolving polygons...")
-        dissolved_polygons = unary_union(buffered_polygons).buffer(-buffer_size, buffer_size, cap_style=2, join_style=2)
+    print("Dissolving polygons...")
+    dissolved_polygons = unary_union(buffered_polygons).buffer(-buffer_size, buffer_size, cap_style=2, join_style=2)
 
-        if remove_holes == 2:  # additional pass to remove any new holes created
-            if isinstance(dissolved_polygons, MultiPolygon):
-                dissolved_polygons = MultiPolygon(close_holes_in_polygons(dissolved_polygons.geoms))
-            else:
-                dissolved_polygons = close_holes_in_polygons([dissolved_polygons])[0]
-
-        new_properties_values = determine_properties_from_components(dissolved_polygons, polygon_data)
-
-        polygons_to_write = []
-
-        # if apply_convex_hull:
-        #     print("Extracting convex hull...")
-        #     if isinstance(dissolved_polygons, MultiPolygon):
-        #         convex_hulls = [polygon.convex_hull for polygon in dissolved_polygons.geoms]
-        #     else:
-        #         convex_hulls = [dissolved_polygons.convex_hull]
-
-        #     polygon_data = list(zip(convex_hulls, new_properties_values))
-        #     merged_hulls = unary_union(convex_hulls) # chulls need an extra dissolve pass as it can introduce overlaps
-        #     new_properties_values = determine_properties_from_components(merged_hulls, polygon_data)
-
-        #     if isinstance(merged_hulls, MultiPolygon):
-        #         polygons_to_write = list(zip(list(merged_hulls.geoms), new_properties_values))
-        #     else:
-        #         polygons_to_write = list(zip([merged_hulls], new_properties_values))
-        # else:
-        #     if isinstance(dissolved_polygons, MultiPolygon):
-        #         polygons_to_write = list(zip(list(dissolved_polygons.geoms), new_properties_values))
-        #     else:
-        #         polygons_to_write = list(zip([dissolved_polygons], new_properties_values))
-
-
-
-
-
-        if apply_convex_hull:
-            print("Extracting conditional convex hulls...")
-
-            if isinstance(dissolved_polygons, MultiPolygon):
-                polygons = dissolved_polygons.geoms
-            else:
-                polygons = [dissolved_polygons]
-
-            updated_polygons = []
-            for poly in polygons:
-                if has_short_edge(poly, threshold=0.5):
-                    updated_polygons.append(poly.convex_hull)
-                else:
-                    updated_polygons.append(poly)
-
-            polygon_data = list(zip(updated_polygons, new_properties_values))
-
-            # Perform a union in case convex hull introduced overlaps
-            merged_polygons = unary_union(updated_polygons)
-            new_properties_values = determine_properties_from_components(merged_polygons, polygon_data)
-
-            if isinstance(merged_polygons, MultiPolygon):
-                polygons_to_write = list(zip(list(merged_polygons.geoms), new_properties_values))
-            else:
-                polygons_to_write = list(zip([merged_polygons], new_properties_values))
-
+    if remove_holes == 2:
+        if isinstance(dissolved_polygons, MultiPolygon):
+            dissolved_polygons = MultiPolygon(close_holes_in_polygons(dissolved_polygons.geoms))
         else:
-            if isinstance(dissolved_polygons, MultiPolygon):
-                dissolved_polygons = MultiPolygon([skip_short_edges(poly, threshold=2.0) for poly in dissolved_polygons.geoms]) #
-                polygons_to_write = list(zip(list(dissolved_polygons.geoms), new_properties_values))
-            else:
-                polygons_to_write = list(zip([dissolved_polygons], new_properties_values))
+            dissolved_polygons = close_holes_in_polygons([dissolved_polygons])[0]
+
+    new_properties_values = determine_properties_from_components(dissolved_polygons, polygon_data)
+
+    if apply_convex_hull:
+        print("Extracting conditional convex hulls...")
+        polygons = dissolved_polygons.geoms if isinstance(dissolved_polygons, MultiPolygon) else [dissolved_polygons]
+        updated_polygons = [poly.convex_hull if has_short_edge(poly, 0.5) else poly for poly in polygons]
+        merged_polygons = unary_union(updated_polygons)
+        polygon_data = list(zip(updated_polygons, new_properties_values))
+        new_properties_values = determine_properties_from_components(merged_polygons, polygon_data)
+        polygons_to_write = list(zip(merged_polygons.geoms if isinstance(merged_polygons, MultiPolygon) else [merged_polygons], new_properties_values))
+    else:
+        if isinstance(dissolved_polygons, MultiPolygon):
+            # dissolved_polygons = MultiPolygon([skip_short_edges(poly, 2.0) for poly in dissolved_polygons.geoms])
+            filtered_polygons = [
+                skip_short_edges(poly, 2.0)
+                for poly in dissolved_polygons.geoms
+            ]
+
+            # Remover los que fallaron (None)
+            filtered_polygons = [poly for poly in filtered_polygons if poly and poly.is_valid and not poly.is_empty]
+
+            dissolved_polygons = MultiPolygon(filtered_polygons)
+
+            polygons_to_write = list(zip(dissolved_polygons.geoms, new_properties_values))
+        else:
+            polygons_to_write = [(dissolved_polygons, new_properties_values[0])]
+
+    print("Writing new polygons to file with preserved CRS...")
+    # 3. Construir manualmente el GeoJSON para incluir el crs original
+    features_out = []
+    for polygon, properties in polygons_to_write:
+        final_properties = dict(first_feature_props)
+        final_properties.update(properties)
+        if simplification_tol > 0.:
+            polygon = polygon.simplify(simplification_tol)
+        features_out.append({
+            "type": "Feature",
+            "geometry": mapping(polygon),
+            "properties": final_properties
+        })
+
+    geojson_output = {
+        "type": "FeatureCollection",
+        "name": "processed_buildings",
+        "crs": crs_block,
+        "features": features_out
+    }
+
+    with open(output_filename, 'w') as f:
+        json.dump(geojson_output, f, indent=2)
+
+    print("Done. File saved with CRS:", crs_block["properties"]["name"])
 
 
-        print("Writing new polygons to file...")
-        with fiona.open(output_filename, 'w', 'GeoJSON', output_schema, crs=input_crs) as output_src:
-            for polygon, properties in polygons_to_write:
-                final_properties = dict(input_src[0]['properties'])
-                final_properties.update(properties)
-
-                if simplification_tol > 0.:
-                    polygon = polygon.simplify(simplification_tol)
-
-                feature = {'geometry': mapping(polygon), 'properties': final_properties}
-                output_src.write(feature)
-
-        print("End")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -244,6 +368,7 @@ def main():
         remove_holes=args.remove_holes,
         simplification_tol=args.simplification_tol
     )
+
 
 if __name__ == "__main__":
     main()

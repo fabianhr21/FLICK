@@ -18,36 +18,8 @@ def main():
     parser.add_argument("--city_name", default="City", help="Name of the city for the CityGML file.")
     args = parser.parse_args()
 
-    # Read the LAZ file
-    laz_file = laspy.read(args.input_file)
-    
-    # Convert to GeoDataFrame
-    gdf = gpd.GeoDataFrame(
-        laz_file.points,
-        geometry=gpd.points_from_xy(laz_file.x, laz_file.y),
-        crs=CRS.from_epsg(4326)  # Assuming WGS84
-    )
+    # Polyprep
+    os.system("python ./polyprep/polyprep.py intput.geojson simplified.geojson 1.0 --remove_holes 2 --simplify_tol 0.1")
+    python clipnbuildings_run.py -id data/ -o ./ -r 1000
 
-    # Create a bounding box around the points
-    minx, miny, maxx, maxy = gdf.total_bounds
-    bbox = box(minx, miny, maxx, maxy)
 
-    # Create a GeoDataFrame for the bounding box
-    bbox_gdf = gpd.GeoDataFrame(geometry=[bbox], crs=gdf.crs)
-
-    # Save the bounding box as a shapefile
-    bbox_gdf.to_file(args.output_file.replace(".gml", ".shp"))
-
-    # Convert to CityGML format (this is a placeholder; actual conversion would require a library or tool)
-    citygml_data = {
-        "city_name": args.city_name,
-        "bounding_box": {
-            "minx": minx,
-            "miny": miny,
-            "maxx": maxx,
-            "maxy": maxy
-        }
-    }
-
-    with open(args.output_file, 'w') as f:
-        json.dump(citygml_data, f)

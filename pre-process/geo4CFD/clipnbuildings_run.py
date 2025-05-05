@@ -75,6 +75,12 @@ def merge_laz_files(input_directory, output_laz):
     count = pipeline.execute()   # run! returns number of points written
 
     print(f"Merged {len(laz_files)} files → {output_laz} ({count:,} points)")
+    # Remove .copc.las files if they exist
+    for f in laz_files:
+        if f.endswith('.copc.las'):
+            os.remove(f)
+    print(f"Removed .copc.las files from {input_directory}")    
+        
     return output_laz
 
 
@@ -155,30 +161,82 @@ def clip_laz_cli_or_pdal(bbox, input_laz, output_laz, poly=False):
         sys.stderr.write(f"PDAL clipping failed: {e}\n")
 
 
+# def fetch_osm_buildings(bbox, target_crs, circle=None):
+#     """
+#     bbox: (xmin, ymin, xmax, ymax) in **projected CRS** (e.g. EPSG:32614)
+#     target_crs: final CRS for output buildings (usually same afrom shapely.geometry import boxs bbox)
+#     circle: shapely.geometry.Polygon in same CRS as bbox (optional)
+#     """
+#     # Convert bbox to polygon and reproject to EPSG:4326
+#     bbox_polygon = box(*bbox)
+#     bbox_gdf = gpd.GeoDataFrame(geometry=[bbox_polygon], crs=target_crs)
+#     bbox_gdf_wgs = bbox_gdf.to_crs(epsg=4326)
+#     # Extract reprojected bounds: (west, south, east, north)
+#     west, south, east, north = bbox_gdf_wgs.total_bounds
+#     bbox_tuple = (west, south, east, north)
+#     # Download buildings from OSM
+#     tags = {'building': True}
+#     gdf = ox.features_from_bbox(bbox_tuple, tags=tags)
+#     # Keep only polygon geometries
+#     gdf = gdf[gdf.geom_type.isin(['Polygon'])]
+#     # Reproject to target_crs
+#     gdf = gdf.to_crs(target_crs)
+#     # Optional: filter by circle
+#     if circle:
+#         centroids = gdf.geometry.centroid
+#         gdf = gdf[centroids.within(circle)]
+#     if gdf.empty:
+#         print("Warning: No geometries found after OSM fetch and filtering.")
+
+#     # Converto to MultiPolygon
+#     # gdf['geometry'] = gdf['geometry'].apply(lambda geom: geom if geom.geom_type == 'MultiPolygon' else shape(geom).buffer(0))
+#     return gdf
+
+
 def fetch_osm_buildings(bbox, target_crs, circle=None):
     """
-    bbox: (xmin, ymin, xmax, ymax) in **projected CRS** (e.g. EPSG:32614)
-    target_crs: final CRS for output buildings (usually same afrom shapely.geometry import boxs bbox)
-    circle: shapely.geometry.Polygon in same CRS as bbox (optional)
+    bbox: (xmin, ymin, xmax, ymax) in projected CRS (e.g. EPSG:32614)
+    target_crs: output CRS (usually same as bbox)
+    circle: shapely.geometry.Polygon to spatially filter buildings (optional)
     """
-    # Convert bbox to polygon and reproject to EPSG:4326
+    # Convert bbox to polygon and reproject to EPSG:4326 for OSM
     bbox_polygon = box(*bbox)
     bbox_gdf = gpd.GeoDataFrame(geometry=[bbox_polygon], crs=target_crs)
     bbox_gdf_wgs = bbox_gdf.to_crs(epsg=4326)
-    # Extract reprojected bounds: (west, south, east, north)
     west, south, east, north = bbox_gdf_wgs.total_bounds
     bbox_tuple = (west, south, east, north)
-    # Download buildings from OSM
+    # Download building footprints from OSM
     tags = {'building': True}
     gdf = ox.features_from_bbox(bbox_tuple, tags=tags)
-    # Keep only polygon geometries
+
+    # Keep only Polygon and MultiPolygon geometries
     gdf = gdf[gdf.geom_type.isin(['Polygon', 'MultiPolygon'])]
-    # Reproject to target_crs
+
+    # Reproject to target CRS
     gdf = gdf.to_crs(target_crs)
-    # Optional: filter by circle
+    gdf = gdf.reset_index() 
+
+    # Optional spatial filtering by circle
     if circle:
         centroids = gdf.geometry.centroid
         gdf = gdf[centroids.within(circle)]
+    print("Head: ", gdf.columns)
+    print("Head: ", gdf.head())
+
+    # Clean and standardize properties
+    gdf = gdf.reset_index(drop=True)
+    gdf['fid'] = 1
+    gdf['osm_id'] = gdf['id'].astype(str)
+    gdf['osm_type'] = gdf['element']
+    gdf['full_id'] = gdf['osm_type'].str[0] + gdf['osm_id']
+
+    # Retain only selected fields
+    keep_cols = ['fid', 'full_id', 'osm_id', 'osm_type', 'building', 'name', 'amenity', 'brand', 'wheelchair']
+    for col in keep_cols:
+        if col not in gdf.columns:
+            gdf[col] = None
+    gdf = gdf[keep_cols + ['geometry']]
+
     return gdf
 
 def separate_laz_file(input_laz, output_dir=None):
@@ -239,8 +297,8 @@ def main():
         parser.error('Specify --bbox, --area_geojson, or --radius')
 
     # Create output directory
-    os.makedirs(args.output_dir + '/Output', exist_ok=True)
-    args.output_dir = os.path.join(args.output_dir, 'Output')
+    os.makedirs(args.output_dir + '/output', exist_ok=True)
+    args.output_dir = os.path.join(args.output_dir, 'output')
     print(f"Output directory: {args.output_dir}")
 
         # Check if input is a directory or file
@@ -253,6 +311,7 @@ def main():
             args.input = merge_laz_files(args.input_dir, os.path.join(args.output_dir, args.output_filename + '_merged.laz'))
         else:
             raise ValueError("Input directory does not exist or is not a directory.")
+    # args.input = os.path.join(args.output_dir, args.output_filename + '_merged.laz')
 
 
     # Determine CRS
@@ -291,8 +350,8 @@ def main():
     buildings_geojson = os.path.join(args.output_dir, 'osm_buildings.geojson')
 
     # Clip LAZ with fallback
-    clip_laz_cli_or_pdal(bounds, args.input, clipped_laz, circle_wkt)
-    separate_laz_file(clipped_laz, output_dir=args.output_dir)
+    # clip_laz_cli_or_pdal(bounds, args.input, clipped_laz, circle_wkt)
+    # separate_laz_file(clipped_laz, output_dir=args.output_dir)
 
     # Fetch & save OSM buildings
     buildings = fetch_osm_buildings(bounds, laz_crs, circle)
