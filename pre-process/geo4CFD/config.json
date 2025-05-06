@@ -2,13 +2,13 @@
 {
     "point_clouds":
     {
-      "ground": "/home/fabianh/Qgis4CFD/automatization/Test_QGIS/clipped_ground.laz",
-      "buildings" : "/home/fabianh/Qgis4CFD/automatization/Test_QGIS/clipped_buildings.laz"
+      "ground": "./output/clipped_merged_ground.laz",
+      "buildings" : "./output/clipped_merged_buildings.laz",
     },
     "polygons" : [ 
       {
         "type": "Building",
-        "path": "/home/fabianh/Qgis4CFD/automatization/Test_QGIS/osm_buildings.geojson",
+        "path": "./output/osm_buildings_polyprep.geojson", // Path to the polygon file
         "unique_id": "gid" ,                    // Optional - use building ID from the polygon file
         "height_attribute": "height",          // Optional - use height from the polygon file for reconstruction
         "floor_attribute":  "num_floors",      // Optional - use number of floors for reconstruction
