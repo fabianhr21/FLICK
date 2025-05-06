@@ -6,3 +6,5 @@ databcn/
 data_bcn/
 output_mty/
 city4cfd
+cache
+polyprep/__pycache__

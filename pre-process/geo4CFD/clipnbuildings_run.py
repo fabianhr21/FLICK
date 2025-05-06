@@ -22,6 +22,7 @@ from polyprep import process_polygons
 import argparse
 import subprocess
 
+
 # Define default CRS and CLI binaries
 DEFAULT_CRS = 'EPSG:4326'  # Mexico ITRF2008 / UTM 14N
 PDAL_CMD = 'pdal'
@@ -32,6 +33,7 @@ import osmnx as ox
 from pyproj import CRS
 import geopandas as gpd
 from shapely.geometry import shape, Point, box
+from shapely.ops import unary_union
 import laspy
 import pdal
 import json
@@ -241,6 +243,23 @@ def fetch_osm_buildings(bbox, target_crs, circle=None):
 
     return gdf
 
+def find_center_point_within_domain(gdf):
+    """
+    Returns the center-most point that lies within the union of all geometries in the GeoDataFrame.
+    """
+    if gdf.empty:
+        return None
+
+    # Union all building polygons into a single geometry
+    unified = unary_union(gdf.geometry)
+
+    # Use representative_point() to ensure the point is inside the polygon
+    center_point = unified.representative_point()
+    # ONly take 2 decimals
+    center_point = Point(round(center_point.x, 2), round(center_point.y, 2))
+
+    return center_point
+
 def separate_laz_file(input_laz, output_dir=None):
     """
     Separate a LAZ file into ground and building classes.
@@ -360,8 +379,12 @@ def main():
     buildings.to_file(buildings_geojson, driver='GeoJSON')
     print(f"OSM building footprints saved to {buildings_geojson}")
 
+    # Find center point within domain
+    center_point = find_center_point_within_domain(buildings)
+    print(f"Center point within domain: {center_point}")
+
     # Applying polyprep to osm_buildings
-    print("Applying polyprep to osm_buildings with arbitray parameters...")
+    print("Applying polyprep to osm_buildings with arbitrary parameters...")
     process_polygons(buildings_geojson, os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson'), buffer_size=2.0, apply_convex_hull=False,remove_holes=2, simplification_tol=0.5)
     print(f"Polyprep applied to osm_buildings, saving to {os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson')}")
 

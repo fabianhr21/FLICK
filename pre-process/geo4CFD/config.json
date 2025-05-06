@@ -3,7 +3,7 @@
     "point_clouds":
     {
       "ground": "./output/clipped_merged_ground.laz",
-      "buildings" : "./output/clipped_merged_buildings.laz",
+      "buildings" : "./output/clipped_merged_buildings.laz"
     },
     "polygons" : [ 
       {
@@ -36,7 +36,7 @@
 
   
     //-- Domain dimensions 
-     "point_of_interest": [370074.86,2838786.50],
+     "point_of_interest": [370085.05,2837995.11], // Point of interest for domain size calculation
     "domain_bnd":       null,            // Same as above
     "top_height":       300,             // Doesn't matter if BPG are used for domain size
     
@@ -67,10 +67,11 @@
     "edge_max_len": 5,
   
     //-- Output and log 
-    "output_file_name":  "mesh_mty_script-test",
+    "output_file_name":  "mesh_mty_script-test_mty",
     "output_format":     "stl",
     "output_separately": false,
   
     "output_log": true,         // Optional, also outputs GeoJSON file of building polygons that couldn't be reconstructed
     "log_file":   "logFile.log" // Optional, defaults to 'log'
-  }
+}
+
