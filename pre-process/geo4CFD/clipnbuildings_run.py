@@ -352,8 +352,8 @@ def main():
     buildings_geojson = os.path.join(args.output_dir, 'osm_buildings.geojson')
 
     # Clip LAZ with fallback
-    # clip_laz_cli_or_pdal(bounds, args.input, clipped_laz, circle_wkt)
-    # separate_laz_file(clipped_laz, output_dir=args.output_dir)
+    clip_laz_cli_or_pdal(bounds, args.input, clipped_laz, circle_wkt)
+    separate_laz_file(clipped_laz, output_dir=args.output_dir)
 
     # Fetch & save OSM buildings
     buildings = fetch_osm_buildings(bounds, laz_crs, circle)
