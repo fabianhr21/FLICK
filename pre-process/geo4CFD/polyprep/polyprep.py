@@ -31,7 +31,6 @@ from shapely.ops import unary_union
 from shapely.prepared import prep
 import fiona
 from rtree import index
-import geopandas as gpd
 import json
 
 
