@@ -250,8 +250,8 @@ def process_polygons(input_filename, output_filename, buffer_size, apply_convex_
     with fiona.open(input_filename, 'r') as input_src:
         input_schema = input_src.schema.copy()
         input_crs = input_src.crs
-        print("Input CRS (Fiona format):", input_crs)
-        print("Input schema:", input_schema)
+        # print("Input CRS (Fiona format):", input_crs)
+        # print("Input schema:", input_schema)
 
         polygon_data = []
         first_feature_props = None

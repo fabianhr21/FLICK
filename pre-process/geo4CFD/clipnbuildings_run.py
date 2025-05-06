@@ -17,6 +17,8 @@ Dependencies:
 """
 import os
 import sys
+sys.path.append('./polyprep')
+from polyprep import process_polygons
 import argparse
 import subprocess
 
@@ -220,8 +222,8 @@ def fetch_osm_buildings(bbox, target_crs, circle=None):
     if circle:
         centroids = gdf.geometry.centroid
         gdf = gdf[centroids.within(circle)]
-    print("Head: ", gdf.columns)
-    print("Head: ", gdf.head())
+    # print("Head: ", gdf.columns)
+    # print("Head: ", gdf.head())
 
     # Clean and standardize properties
     gdf = gdf.reset_index(drop=True)
@@ -358,5 +360,11 @@ def main():
     buildings.to_file(buildings_geojson, driver='GeoJSON')
     print(f"OSM building footprints saved to {buildings_geojson}")
 
+    # Applying polyprep to osm_buildings
+    print("Applying polyprep to osm_buildings with arbitray parameters...")
+    process_polygons(buildings_geojson, os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson'), buffer_size=2.0, apply_convex_hull=False,remove_holes=2, simplification_tol=0.5)
+    print(f"Polyprep applied to osm_buildings, saving to {os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson')}")
+
 if __name__ == '__main__':
     main()
+
