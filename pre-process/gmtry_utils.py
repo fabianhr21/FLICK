@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import mpi4py 
 mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
-
+##
 from stl import mesh
 import numpy as np
 import math

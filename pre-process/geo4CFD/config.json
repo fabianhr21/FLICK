@@ -14,14 +14,14 @@
         "floor_attribute":  "num_floors",      // Optional - use number of floors for reconstruction
         "floor_height": 3,                     // Floor height, required if 'floor_attribute' is defined
         "height_attribute_advantage": false,   // In case height attribute takes precedence over other reconstruction from point cloud
-        "avoid_bad_polys": false,              // Optional - ignore or try to reconstruct problematic (non-simple) polygons
+        "avoid_bad_polys": true,              // Optional - ignore or try to reconstruct problematic (non-simple) polygons
         "refine": false                        // Optional - refine surface
       }
     ],
     "reconstruction_regions" : [
       {
-        "influence_region": 200,                // Radius, Polygon points, imported polygon, or null for BPG
-        "lod":   "1.2",                         // LoD1.2, 1.3, or 2.2
+        "influence_region": 400,                // Radius, Polygon points, imported polygon, or null for BPG
+        "lod":   "1.3",                         // LoD1.2, 1.3, or 2.2
         "complexity_factor": 0.1,               // Graph cut optimisation bias for LoD1.3 and LoD2.2, required if those LoDs are chosen
         "lod13_step_height": 3,                 // Optional - choose LoD1.3 minimum step height between roof faces in m
         "validate":          true,             // Optional - do the geometric validity check and report on invalid buildings
@@ -36,7 +36,7 @@
 
   
     //-- Domain dimensions 
-     "point_of_interest": [370085.05,2837995.11], // Point of interest for domain size calculation
+     "point_of_interest": [6509956.51,11368717.97], // Point of interest for domain size calculation
     "domain_bnd":       null,            // Same as above
     "top_height":       300,             // Doesn't matter if BPG are used for domain size
     
@@ -47,7 +47,7 @@
     "bnd_type_bpg": "Rectangle",         // Round, Rectangle, Oval. Matters only if using BPG
     "bpg_blockage_ratio": false,         // Optional - blockage ratio BPG. Can be set as 'true' for default, or as a number defining max allowed blockage ratio
     "flow_direction":  [1, 0],           // Required for Rectangular and Oval domain, and Round with the blockage ratio
-    "bpg_domain_size": [1, 1, 1, 2],    // Optional - overwrites bpg distances from tallest building
+    "bpg_domain_size": [20, 30, 40, 20],    // Optional - overwrites bpg distances from tallest building
                                          // [front, sides, back, top] Rectangle/Ellipse, [sides, top] for round
   
     //- Terrain and building reconstruction 
@@ -67,7 +67,7 @@
     "edge_max_len": 5,
   
     //-- Output and log 
-    "output_file_name":  "mesh_mty_script-test_mty",
+    "output_file_name":  "mesh_mty_topo",
     "output_format":     "stl",
     "output_separately": false,
   
