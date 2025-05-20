@@ -9,7 +9,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
-import pyAlya
+import pyQvarsi
 import h5py
 
 mpi_comm = MPI.COMM_WORLD
@@ -19,7 +19,7 @@ mpi_size = mpi_comm.Get_size()
 def plane_generation(Length,nx,ny):
 
 	# Generate partition table
-	ptable = pyAlya.PartitionTable.new(1,nelems=(nx-1)*(ny-1),npoints=nx*ny)
+	ptable = pyQvarsi.PartitionTable.new(1,nelems=(nx-1)*(ny-1),npoints=nx*ny)
 
 	# Generate points
 	points = np.array([
@@ -30,7 +30,7 @@ def plane_generation(Length,nx,ny):
 		],dtype='double')
 
 	# Generate plane mesh
-	return pyAlya.Mesh.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,compute_massMatrix=False)
+	return pyQvarsi.MeshAlya.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,compute_massMatrix=False)
 
 def solid_perimeter_generation(triangles,dist_resolution) -> None:
 
@@ -110,7 +110,7 @@ def geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangl
                 height_G=np.concatenate((height_G,recv_buff_height[i+1]),axis=0)
                 distance_G=np.concatenate((distance_G,recv_buff_distance[i+1]),axis=0)
 
-        fields = pyAlya.Field(xyz = points, ptable=pyAlya.PartitionTable.new(1,1,0))
+        fields = pyQvarsi.Field(xyz = points, ptable=pyQvarsi.PartitionTable.new(1,1,0))
 
         fields['MASK'] = mask_G
         fields['HEGT'] = height_G

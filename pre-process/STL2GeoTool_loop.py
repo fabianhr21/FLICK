@@ -6,8 +6,8 @@ mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
 import csv
 import os, re, glob, subprocess, numpy as np
-from geometry_utils import geometrical_magnitudes, save_scalarfield, plane_generation, calculate_bounding_box, append_UV_features, move_stl_to_origin, rotate_geometry
-import pyAlya
+from gmtry_utils import geometrical_magnitudes, save_scalarfield, plane_generation, calculate_bounding_box, append_UV_features, move_stl_to_origin, rotate_geometry
+import pyQvarsi
 from stl import mesh
 import shutil
 import argparse
@@ -17,15 +17,15 @@ mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
 # Folders & files
-STL_DIR = '../'
-STL_BASENAME = 'grid_of_cubes'
+STL_DIR = './'
+STL_BASENAME = 'UPCNord_geometry'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0
 DIST_RESOLUTION = 1.0
 
 # Parameters
-WIND_DIRECTION =  [209.37, 194.43, 195.01] #, 187.04, 177.39, 194.31] #, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
+WIND_DIRECTION =  [0] #, 187.04, 177.39, 194.31] #, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
 # WIND_DIRECTION = [0,20,40,60,80]
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [0, 0, 0.0]
@@ -116,30 +116,30 @@ if __name__ == '__main__':
                 STL_DISPLACEMENT = [j, i, 0]
                 print(STL_DISPLACEMENT)
                 int_mesh = plane_generation(STEP_SIZE, N_POINTS, N_POINTS)
-                pyAlya.pprint(0, 'plane mesh Generated', flush=True)
+                pyQvarsi.pprint(0, 'plane mesh Generated', flush=True)
 
                 int_xyz = int_mesh.xyz.copy()
 
-                pyAlya.pprint(0, 'STL DIR: ', POST_DIR, flush=True)
-                pyAlya.pprint(0, 'POST DIR: ', POST_DIR, flush=True)
+                pyQvarsi.pprint(0, 'STL DIR: ', POST_DIR, flush=True)
+                pyQvarsi.pprint(0, 'POST DIR: ', POST_DIR, flush=True)
 
                 if mpi_rank == 0 and not os.path.exists(POST_DIR):
                     os.makedirs(POST_DIR)
 
-                pyAlya.pprint(0, "reading ", POST_DIR + rotated_stl_basename + '.stl')
+                pyQvarsi.pprint(0, "reading ", POST_DIR + rotated_stl_basename + '.stl')
                 output_fields = geometrical_magnitudes(POST_DIR + rotated_stl_basename + '.stl', int_xyz, stl_angle=STL_ROT_ANGLE, stl_displ=STL_DISPLACEMENT, stl_scale=STL_SCALE, dist_resolution=DIST_RESOLUTION)
 
-                if pyAlya.utils.is_rank_or_serial(0):
+                if pyQvarsi.utils.is_rank_or_serial(0):
                     int_mesh.save(POST_DIR + rotated_stl_basename + f'-{n}-geodata.h5', mpio=False)
 
                 mpi_comm.Barrier()
 
                 metadata = {'STL name:': rotated_stl_basename + '.stl'}
-                if pyAlya.utils.is_rank_or_serial(1):
+                if pyQvarsi.utils.is_rank_or_serial(1):
                     output_fields.save(POST_DIR + rotated_stl_basename + f'-{n}-geodata.h5', mpio=False)
 
-                pyAlya.pprint(0, 'Done.', flush=True)
-                pyAlya.cr_info()
+                pyQvarsi.pprint(0, 'Done.', flush=True)
+                pyQvarsi.cr_info()
                 n += 1
         mpi_comm.Barrier()
 
