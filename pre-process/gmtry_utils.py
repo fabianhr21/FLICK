@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 import pyQvarsi
 import h5py
+import trimesh
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
@@ -279,21 +280,26 @@ def calculate_bounding_box(input_file):
     return min_coords, max_coords
 
 def append_UV_features(file_path, N_POINTS=256):
-    # Open the h5 file
     with h5py.File(f"{file_path}-geodata.h5", 'r+') as file:
-        # Get the dimensions of the input data
         input_xdim = N_POINTS
         input_ydim = N_POINTS
-        
-        # Create U and V arrays of ones
         U = np.ones((input_xdim, input_ydim))
-        
-        # Add GRDUX, GRDVY and GRDWZ arrays to the h5 file as arrays
-        file.create_dataset('/FIELD/VARIABLES/GRDUX', data=U)
-        file.create_dataset('/FIELD/VARIABLES/GRDVY', data=U)
-        file.create_dataset('/FIELD/VARIABLES/GRDWZ', data=U)
-        file.create_dataset('/FIELD/VARIABLES/U', data=U)
-        file.create_dataset('/FIELD/VARIABLES/V', data=U)     
+
+        # List of dataset names to overwrite
+        datasets = [
+            '/FIELD/VARIABLES/GRDUX',
+            '/FIELD/VARIABLES/GRDVY',
+            '/FIELD/VARIABLES/GRDWZ',
+            '/FIELD/VARIABLES/U',
+            '/FIELD/VARIABLES/V'
+        ]
+
+        for dset in datasets:
+            # If dataset exists, delete it
+            if dset in file:
+                del file[dset]
+            # Now safely create the dataset
+            file.create_dataset(dset, data=U)
 
 def move_stl_to_origin(stl_file, output_file):
     # Load the STL file
@@ -308,7 +314,22 @@ def move_stl_to_origin(stl_file, output_file):
     # Save the translated mesh to a new file
     original_mesh.save(output_file)
     print(f'Saved translated STL file to: {output_file}')
-    
+
+def move_stl_to_origin_trimesh(input_file, output_file):
+    # Load the STL mesh
+    mesh = trimesh.load_mesh(input_file, force='mesh')
+
+    # Check for valid mesh
+    if not isinstance(mesh, trimesh.Trimesh):
+        raise ValueError("Loaded object is not a Trimesh mesh.")
+
+    # Translate mesh so its minimum bounding box corner is at the origin
+    translation_vector = -mesh.bounds[0]
+    mesh.apply_translation(translation_vector)
+
+    # Export the mesh to a new file
+    mesh.export(output_file)
+    print(f"Saved translated STL file to: {output_file}")
 
 def compute_bounding_box_center(stl_mesh):
     """
