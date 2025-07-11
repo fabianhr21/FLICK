@@ -33,8 +33,8 @@ def isIn_gpu(point, triangles_gpu):
     return int(idx[0].item()) if len(idx) > 0 else -1
 
 def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_triangles, dist_resolution):
-    h_triangles = np.copy(horizontal_triangles)
-    h_triangles[:, :, 2] = 0
+    h_triangles_gpu = cp.array(horizontal_triangles, dtype=cp.float32)
+    h_triangles_gpu[:, :, 2] = 0.0  # ya en GPU
 
     # Generar perímetro (en CPU)
     perimeter = []
@@ -72,9 +72,8 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
     subset = points[ini_idx:final_idx + 1]
     mask_L = np.zeros(subset.shape[0])
     height_L = np.zeros(subset.shape[0])
-    distance_L = np.zeros(subset.shape[0])
 
-    h_triangles_gpu = cp.array(h_triangles,dtype=cp.float32)
+    # h_triangles_gpu = cp.array(h_triangles,dtype=cp.float32)
     horizontal_triangles_gpu = cp.array(horizontal_triangles,dtype=cp.float32)
 
     for idx, p in enumerate(subset):
@@ -85,22 +84,18 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
         else:
             mask_L[idx] = 0
             height_L[idx] = horizontal_triangles[tri_idx][0][2]
-        if mask_L[idx] == 1:
-            distance_L[idx] = wall_distance_gpu(p, perimeter_gpu)
+
 
     # Reducir entre procesos
     recv_mask = mpi_comm.allgather(mask_L)
     recv_height = mpi_comm.allgather(height_L)
-    recv_distance = mpi_comm.allgather(distance_L)
 
     mask_G = np.concatenate(recv_mask)
     height_G = np.concatenate(recv_height)
-    distance_G = np.concatenate(recv_distance)
 
     fields = pyQvarsi.Field(xyz=points, ptable=pyQvarsi.PartitionTable.new(1, 1, 0))
     fields['MASK'] = mask_G
     fields['HEGT'] = height_G
-    fields['WDST'] = distance_G
     return fields
 
 def geometrical_magnitudes_gpu(STL_FILE, target_mesh, stl_angle=[0.0, 0.0, 0.0],
