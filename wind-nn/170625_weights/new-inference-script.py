@@ -12,26 +12,26 @@ import string
 import matplotlib.pyplot as plt
 import os, h5py,glob
 # from Models import UNet_wind
-from ModelsGenerator import Generator2D 
+from Models import Generator2D 
 # from Models import ResidualBlock2D,Discriminator2D
 import sys
-sys.path.append('../pre-process/')
+sys.path.append('../../pre-process/')
 import STL2GeoTool_loop
 
 
 BASE_FOLDER='./'
 
 
-DATASET_BASE_PATH='../pre-process/output/'
-OUTPUT_PATH = './output/'
-DATA_SAMPLE_BASENAME='campusnord_1536'
+DATASET_BASE_PATH='../../pre-process/output/'
+OUTPUT_PATH = '../output/'
+DATA_SAMPLE_BASENAME='campusnord_1280'
 MODEL_BASENAME='generator'
-MODEL_LOADING_PATH='./weights_170625/'
+MODEL_LOADING_PATH='./'
 INPUT_FEAT=['MASK','HEGT'] #having a MASK distinguishing solid and fluid regions at the first position is mandatory.
 TARGET_FEAT=['U','V']
 EXTRA_FEAT=[]
-INPUT_XDIM=1536
-INPUT_YDIM=1536
+INPUT_XDIM=1280
+INPUT_YDIM=1280
 TARGET_XDIM=256
 TARGET_YDIM=256
 SPACING_X=1.0
