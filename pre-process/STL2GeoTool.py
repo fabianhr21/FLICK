@@ -6,7 +6,7 @@ mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
 import csv
 import os, re, glob, subprocess, numpy as np
-from gmtry_utils import geometrical_magnitudes, save_scalarfield, plane_generation, calculate_bounding_box, append_UV_features, move_stl_to_origin, rotate_geometry
+from gmtry_utils import geometrical_magnitudes, save_scalarfield, plane_generation, calculate_bounding_box, append_UV_features, move_stl_to_origin, rotate_geometry,append_UV_features
 from gpu_gmtry_utils import geometrical_data_extractor_gpu,geometrical_magnitudes_gpu
 import pyQvarsi
 from stl import mesh
@@ -22,7 +22,7 @@ mpi_size = mpi_comm.Get_size()
 
 # Folders & files
 STL_DIR = './'
-STL_BASENAME = 'campusnord_256'
+STL_BASENAME = 'campusnord_1280'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0
@@ -30,10 +30,10 @@ DIST_RESOLUTION = 1.0
 
 # Parameters
 # Wind direction each 22.5 degrees
-WIND_DIRECTION =  [0,22.5,45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
+WIND_DIRECTION =  [0,112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [640, 640, 0.0]
-N_POINTS = 1280
+N_POINTS = 128
 STEP_SIZE = N_POINTS // 2 # For 1 meter resolution
 p_overlap = 1
 overlap = int(2 * STEP_SIZE * p_overlap)
@@ -144,6 +144,9 @@ if __name__ == "__main__":
 
                 # Copy mesh points
                 int_xyz = int_mesh.xyz.copy()
+            
+                pyQvarsi.pprint(0, 'STL DIR: ', POST_DIR, flush=True)
+                pyQvarsi.pprint(0, 'POST DIR: ', POST_DIR, flush=True)
 
                 # Measure geometry processing
                 t2 = perf_counter()
@@ -180,12 +183,16 @@ if __name__ == "__main__":
                 t5 = perf_counter()
                 if mpi_rank == 0:
                     print(f"[Timing] H5 save: {t5 - t4:.3f} seconds")
+                            # Append U and V features
+                    append_UV_features(POST_DIR + rotated_stl_basename + f'-{n}')
+                    print(f"U and V features added to {POST_DIR + rotated_stl_basename + f'-{n}-geodata.h5'}")
 
                 print(f"[Rank {mpi_rank}] Step {n} total time: {t5 - t0:.3f} seconds\n")
 
 
                 pyQvarsi.pprint(0, 'Done.', flush=True)
                 pyQvarsi.cr_info()
+
                 n += 1
                 print(f"[Rank {mpi_rank}] Step {n} took {perf_counter() - start:.2f} seconds")
         mpi_comm.Barrier()
