@@ -1,12 +1,12 @@
 # ADD_FEAT.py
 
 import STL2GeoTool_loop
-from geometry_utils import append_UV_features
+from gmtry_utils import append_UV_features
 import os
 import argparse
 
 # Add arguments when calling the function
-STL_BASENAME = 'grid_of_cubes'
+STL_BASENAME = 'campusnord_512'
 
 def get_args():
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
