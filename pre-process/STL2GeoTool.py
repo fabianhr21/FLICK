@@ -22,7 +22,7 @@ mpi_size = mpi_comm.Get_size()
 
 # Folders & files
 STL_DIR = './'
-STL_BASENAME = 'campusnord_testvel'
+STL_BASENAME = 'campusnord_256'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0
@@ -30,11 +30,11 @@ DIST_RESOLUTION = 1.0
 
 # Parameters
 # Wind direction each 22.5 degrees
-WIND_DIRECTION =  [0, 22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
+WIND_DIRECTION =  [0,22.5,45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [640, 640, 0.0]
-STEP_SIZE = 64
-N_POINTS = 512
+N_POINTS = 1280
+STEP_SIZE = N_POINTS // 2 # For 1 meter resolution
 p_overlap = 1
 overlap = int(2 * STEP_SIZE * p_overlap)
 
