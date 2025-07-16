@@ -22,7 +22,7 @@ mpi_size = mpi_comm.Get_size()
 
 # Folders & files
 STL_DIR = './'
-STL_BASENAME = 'campusnord_1280'
+STL_BASENAME = 'sanjeronimo_stl_1280'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0
@@ -30,11 +30,12 @@ DIST_RESOLUTION = 1.0
 
 # Parameters
 # Wind direction each 22.5 degrees
-WIND_DIRECTION =  [0,112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
+WIND_DIRECTION =  [0] 
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
-STL_DISPLACEMENT = [640, 640, 0.0]
 N_POINTS = 1280 # Equivalent to desired extention in meters
 STEP_SIZE = N_POINTS // 2 # For 1 meter resolution
+STL_DISPLACEMENT = [STEP_SIZE, STEP_SIZE, 0.0] # Displacement to center to the N_POINTS center
+CENTER_DOMAIN = True # Center the domain around the origin
 p_overlap = 1
 overlap = int(2 * STEP_SIZE * p_overlap)
 
@@ -46,9 +47,10 @@ def get_args():
     parser.add_argument('-output_path', default=POST_DIR_MAIN, help='output folder name')
     parser.add_argument('-step_size', type=int, default=STEP_SIZE, help='step size')
     parser.add_argument('-n_points', type=int, default=N_POINTS, help='number of points')
-    parser.add_argument('-p_overlap', type=int, default=p_overlap, help='overlap')
+    parser.add_argument('-p_overlap', type=int, default=p_overlap, help='p-overlap percentage, 1 is 0 overlap')
     parser.add_argument('-wind_direction', type=int, default=WIND_DIRECTION, help='wind direction')
     parser.add_argument('-use_gpu', default=True, help='Use GPU for computations')
+    parser.add_argument('-center_domain', type=bool, default=CENTER_DOMAIN, help='Center the domain around the origin')
     args, _ = parser.parse_known_args()
     return args
 
@@ -111,8 +113,15 @@ if __name__ == "__main__":
         
             x_length = mpi_comm.bcast(x_length if mpi_rank == 0 else None, root=0)
             y_length = mpi_comm.bcast(y_length if mpi_rank == 0 else None, root=0)
+            
+            if CENTER_DOMAIN == True:
+                # Center the domain around the origin
+                j_global = x_length // 2
+                i_global = y_length // 2
+                STL_DISPLACEMENT = [j_global, i_global, 0]
+                print(f"Centering domain at: {STL_DISPLACEMENT}")
 
-            # mpi_comm.Barrier()
+            
             MPI.COMM_WORLD.Barrier()
         else:
             STL_GEOREF = STL_BASENAME + '_geo'
@@ -147,6 +156,7 @@ if __name__ == "__main__":
             
                 pyQvarsi.pprint(0, 'STL DIR: ', POST_DIR, flush=True)
                 pyQvarsi.pprint(0, 'POST DIR: ', POST_DIR, flush=True)
+                print(f"Stl file to process: {POST_DIR + rotated_stl_basename + '.stl'}")
 
                 # Measure geometry processing
                 t2 = perf_counter()
@@ -158,7 +168,7 @@ if __name__ == "__main__":
                         stl_displ=STL_DISPLACEMENT,
                         stl_scale=STL_SCALE,
                         dist_resolution=DIST_RESOLUTION,
-                        z_tol=1e-2
+                        z_tol=1e-20
                     )
                 else:
                     output_fields = geometrical_magnitudes(
