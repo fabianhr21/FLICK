@@ -30,7 +30,11 @@ DIST_RESOLUTION = 1.0
 
 # Parameters
 # Wind direction each 22.5 degrees
+<<<<<<< Updated upstream
 WIND_DIRECTION =  [0] 
+=======
+WIND_DIRECTION =  [22.5, 45, 67.5, 90, 112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
+>>>>>>> Stashed changes
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 N_POINTS = 1280 # Equivalent to desired extention in meters
 STEP_SIZE = N_POINTS // 2 # For 1 meter resolution

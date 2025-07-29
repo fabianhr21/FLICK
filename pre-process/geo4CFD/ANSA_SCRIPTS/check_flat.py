@@ -202,8 +202,19 @@ def main():
 
     # Creates domain and assign different PID to faces, core script modified (change in your directory)
     #xp,yp,zp,xn,yn,zn
-    CreateDomain._multibox(40*h_max,30*h_max,20*h_max,20*h_max,30*h_max,z_min,False)    
-	
+    xp = 40 * h_max
+    yp = 30 * h_max
+    zp = 20 * h_max
+    xn = 20 * h_max
+    yn = 30 * h_max
+    zn = z_min
+
+    x_extent = (xp + x_max) + (xn + x_min)
+    y_extent = (yp + y_max) + (yn + y_min)
+    z_extent = (zp + z_max)
+
+    CreateDomain._multibox(xp, yp, zp, xn, yn, zn, False)
+
 	# Select working parts and recognize FM perimeters
     working_parts = base.CollectEntities(deck, None, "ANSAPART", filter_visible=True)
     fm = base.FeatureHandler(working_parts)
@@ -315,6 +326,12 @@ def main():
     # Save
     base.SaveAs(target_path+input_file+".ansa")
     print (input_file, "saved\n")    
+
+    # === Print domain extension in x, y, z (NEW) ===
+    print(f"Domain extension:")
+    print(f"  X: {x_extent}")
+    print(f"  Y: {y_extent}")
+    print(f"  Z: {z_extent}")
 
 
 if __name__ == '__main__':
