@@ -9,10 +9,10 @@ import sys
 import math
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/ANSA/Data/cedval/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/ANSA/Data/cedval/"
-input_file = "sedval_mts"
-target_path = "/home/fabianh/ANSA/Data/cedval/"
+params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
+working_directory = "/home/fabianh/FLICK/"
+input_file = "grid_of_cubes"
+target_path = "/home/fabianh/FLICK/"
 h_max = 150
 
 def GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max):

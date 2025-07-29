@@ -2,7 +2,6 @@
 import os
 import ansa
 from ansa import *
-from UtilsFunctions import GetVerticalWallFaces
 import math
 
 def separate_faces_by_vector(deck, x, y, z, angle, tol=0.1, pid=1,to_pid=11):
