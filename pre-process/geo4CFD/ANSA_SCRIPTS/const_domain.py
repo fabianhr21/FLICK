@@ -9,10 +9,11 @@ import sys
 import math
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/ANSA/Data/cedval/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/ANSA/Data/cedval/"
-input_file = "sedval_mts"
-target_path = "/home/fabianh/ANSA/Data/cedval/"
+params = "/home/fabianh/ANSA/Data/scripts_final/MESH_PARAMETERS_MANDATORY.ansa_mpar"
+working_directory = "/home/fabianh/ANSA/Data/cedval/cedval_const/"
+# input_file = "cityBlocks"
+input_file = "cedval"
+target_path = "/home/fabianh/ANSA/Data/cedval/cedval_const/"
 h_max = 150
 
 def GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max):
@@ -192,8 +193,10 @@ def main():
     y_values = [base.GetEntityCardValues(deck, node, ("Y",))["Y"] for node in nodes]
     x_min = min(x_values)
     x_max = max(x_values)
+    x_length = x_max - x_min
     y_min = min(y_values)
     y_max = max(y_values)
+    y_length = y_max - y_min
     z_min = min(z_values)
     z_max = max(z_values)
     height = z_max - z_min
@@ -202,7 +205,18 @@ def main():
 
     # Creates domain and assign different PID to faces, core script modified (change in your directory)
     #xp,yp,zp,xn,yn,zn
-    CreateDomain._multibox(40*h_max,30*h_max,20*h_max,20*h_max,30*h_max,z_min,False)    
+    xp = 0.5*h_max
+    yp = 0.5*h_max
+    zp = 720
+    xn = 0.5*h_max
+    yn = 0.5*h_max
+    zn = z_min
+    x_length_domain = x_length + xp + xn
+    y_length_domain = y_length + yp + yn
+    z_length_domain = (z_max - z_min) + zp + (0.5*h_max)
+    print("Domain lengths:", x_length_domain, y_length_domain, z_length_domain)
+    CreateDomain._multibox(xp,yp,zp,xn,yn,zn,False)
+
 	
 	# Select working parts and recognize FM perimeters
     working_parts = base.CollectEntities(deck, None, "ANSAPART", filter_visible=True)
@@ -216,42 +230,16 @@ def main():
     # Separate PID
     base.PidToPart()
     
-    # Create Size Boxes
-    ## Buildings size box
-    buildings = base.GetEntity(deck, "PSHELL", 1)
-    search_type = ("SHELL",)
-    buildings_shells = base.CollectEntities(deck, buildings, search_type,recursive=True)
-    arg2 = []
-    arg2.append([1.0, 0.0, 0.0, ])
-    arg2.append([0.0, 1.0, 0.0, ])
-    buildings_sb = ansa.base.SizeBoxOrtho(buildings_shells, directions=arg2,  max_length_surface=10,max_length_volume=16)
-    ## Campus
-    min_coords = [x_min+(5*h_max),y_min+ (5*h_max),z_min]
-    max_coords = [x_max-(5*h_max),y_max -(5*h_max),z_max]
-    campus_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 6, 10)   
-    ## ABL
-    min_coords = [x_min - (15*h_max), y_min,z_min]
-    max_coords = [x_max,y_max,z_max]
-    abl_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 30, 40)
-    ## Close ground
-    min_coords = [x_min-(20*h_max),y_min- (30*h_max),z_min]
-    max_coords = [x_max+(40*h_max),y_max +(30*h_max),z_max+h_max]
-    close_ground_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 85, 85)
-    ## Wake 1 (10h)
-    min_coords = [x_max - h_max,y_min,z_min]
-    max_coords = [(x_max - h_max) + (10*h_max),y_max ,z_max]
-    wake1_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 40, 60)   
-    ## Wake 2 (20h)
-    min_coords = [(x_max - h_max)+ (9*h_max+20),y_min ,z_min]
-    max_coords = [(x_max - h_max) +(29*h_max),y_max,z_max]
-    wake2_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 60, 80)
-    
-    # Save Size Boxes to a list
-    sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
-    
+
+
+	# Create ABL	for sizing
+    min_coords = [x_min - xn, y_min - yn, z_min]
+    max_coords = [x_max + xp, y_max + yp, 48]    
+    abl_box = morph.MorphMinMax(None, min_coords, max_coords)
+
     #Uses STL algorith to recover exact geometry
     #mesh.AspacingSTL('1%', 50, 0, 0.001)
-    mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    mesh.AspacingSTL("5%", 50.0, 0.0, 1)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -264,12 +252,12 @@ def main():
     print("Elements released from faces\n")
     
     # Describe the solid
-    mesh.IntersectSolidDescription(0, fuse_distance = 0.5, improve_mesh_quality=False)
+    mesh.IntersectSolidDescription(0, fuse_distance = 0.1, improve_mesh_quality=False)
     print("Solid description of the buildings done\n")
     
     # Create surface geometry
     shells = base.CollectEntities(deck, None, 'SHELL', recursive = True)
-    mesh.FEMToSurfArea(shells, delete = True, imprint = False)
+    mesh.FEMToSurfArea(shells,delete = True, imprint = False)
     # base.DeleteEntity(shells, True)
     print("Buildings elements converted to faces\n")
     
@@ -288,14 +276,16 @@ def main():
     print("Topology created\n")
     
     # Convert Size Boxes to Size Field
-    size_field = mesh.ConvertSizeBoxesToSizeField(size_boxes=sbs)
+    # size_field = mesh.ConvertSizeBoxesToSizeField(size_boxes=sbs)
     
     # Creates PID for later
-    topPrecursor = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "topPrecursor"})
-    groundPrecursor = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "groundPrecursor"})
+    bot_out = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "bot_out"})
+    bot_south = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "bot_south"})
+    bot_in = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "bot_in"})
+    bot_north = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "bot_north"})
     
     # Create groundBuildings
-    GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max)
+    # GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max)
     
     # Simplify faces
     ret = mesh.SimplifyMacros(
@@ -310,8 +300,28 @@ def main():
     print(ret)
     
     # Separate Roofs from Walls
-    separate_faces_by_vector(constants.NASTRAN, 0, 0, 1, 30, tol=0.1, pid=1,to_pid=11)
+    # separate_faces_by_vector(constants.NASTRAN, 0, 0, 1, 30, tol=0.1, pid=1,to_pid=11)
+    # # Delete north face
+    north_face = base.GetEntity(deck, "SHELL_PROPERTY", 3)
+    south_face = base.GetEntity(deck, "SHELL_PROPERTY", 5)
+    base.DeleteEntity(north_face, True,compress=False)
+    base.CreateEntity(deck, "SHELL_PROPERTY", {"PID": 3, "Name": "lateralDomainNorth"})
+    print("North face deleted\n")
+
+    # Create north face pid linked to south
+    base.GeoTranslate("LINK",-2,"SAME PART","COPY",0,y_length_domain,0,south_face,keep_connectivity=True,draw_results=True)
+    # Delete outlet face
+    outlet_face = base.GetEntity(deck, "SHELL_PROPERTY", 7)
+    base.DeleteEntity(outlet_face, True,compress=False)
+    base.CreateEntity(deck, "SHELL_PROPERTY", {"PID": 7, "Name": "outlet"})
+    print("Outlet face deleted\n")
+
+    # Create outlet face pid linked to inlet
+    inlet_face = base.GetEntity(deck, "SHELL_PROPERTY", 2)
+    base.GeoTranslate("LINK",5,"SAME PART","COPY",x_length_domain,0,0,inlet_face,keep_connectivity=True,draw_results=True)
     
+    base.Topo()
+    base.Orient()
     # Save
     base.SaveAs(target_path+input_file+".ansa")
     print (input_file, "saved\n")    
