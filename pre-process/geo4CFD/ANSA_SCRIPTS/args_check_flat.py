@@ -369,8 +369,8 @@ def main(input_file_dir, working_directory, target_path):
     sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
     
     #Uses STL algorith to recover exact geometry
-    mesh.AspacingSTL('1%', 50, 0, 0.001)
-    # mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    #mesh.AspacingSTL('1%', 50, 0, 0.001)
+    mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -539,6 +539,9 @@ def main(input_file_dir, working_directory, target_path):
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
+
+    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
+    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
 
     # Change geo file with y_length
     if os.path.exists(target_path+input_file+".geo"):

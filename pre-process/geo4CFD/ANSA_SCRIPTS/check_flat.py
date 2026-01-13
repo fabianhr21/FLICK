@@ -12,10 +12,11 @@ import sys
 
 deck = constants.OPENFOAM
 params = "/home/fabianh/ANSA/Data/scripts_final/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/FLICK/"
+working_directory = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
+file_path = "/home/fabianh/FLICK/"
 input_file = "grid_of_cubes"
 target_path = "/home/fabianh/FLICK/"
-h_max = 150
+
 
 def generate_geo(geo_script, input_file,y_length):
     # Read template
@@ -267,6 +268,7 @@ def _main_core(iso_ent, status, user_val, cog_val):
 			return None
 
 
+
 def main():
 
     # # Take the last part of the path as input file name without extension
@@ -279,7 +281,7 @@ def main():
     session.New("discard")
     mesh.ReadMeshParams(params)
     input = base.InputStereoLithography(
-        working_directory + input_file + ".stl" , elements_id="offset-freeid"
+        file_path+ input_file + ".stl" , elements_id="offset-freeid"
     )
 	# Select working parts and recognize FM perimeters
     working_parts = base.CollectEntities(deck, None, "ANSAPART", filter_visible=True)
@@ -371,8 +373,8 @@ def main():
     sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
     
     #Uses STL algorith to recover exact geometry
-    mesh.AspacingSTL('1%', 50, 0, 0.001)
-    # mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    #mesh.AspacingSTL('1%', 50, 0, 0.001)
+    mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -541,6 +543,9 @@ def main():
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
 
+    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
+    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
+	
     # Change geo file with y_length
     if os.path.exists(target_path+input_file+".geo"):
         generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
