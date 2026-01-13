@@ -427,7 +427,10 @@ def main():
     domain_file.close()
 
     # Change geo file with y_length
-    generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
+    if os.path.exists(target_path+input_file+".geo"):
+        generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
+    else:
+        print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
 
     # Save
     base.SaveAs(target_path+input_file+".ansa")
