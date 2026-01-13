@@ -196,14 +196,14 @@ def get_args(input_file, working_directory, target_path):
     return input_file, working_directory, target_path
 
 
-def main():
+def main(input_file_dir, working_directory, target_path):
 
-    # # Take the last part of the path as input file name without extension
-    # input_file = os.path.splitext(os.path.basename(input_file_dir))[0]
+    # Take the last part of the path as input file name without extension
+    input_file = os.path.splitext(os.path.basename(input_file_dir))[0]
 
-    # print(f"Input file: {input_file}")
-    # print(f"Working directory: {working_directory}")
-    # print(f"Target path: {target_path}")
+    print(f"Input file: {input_file}")
+    print(f"Working directory: {working_directory}")
+    print(f"Target path: {target_path}")
 	# Input StereoLithography from City4CFD
     session.New("discard")
     mesh.ReadMeshParams(params)
@@ -434,6 +434,5 @@ def main():
     print (input_file, "saved\n")    
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
 	
