@@ -1,5 +1,6 @@
 # SCRIPTS for preparing StereoLithography geometry in ANSA for CFD 
 ## ALL FILES FROM THE REPO SHOULD BE IN THE SAME DIRECTORY BEFORE OPENING ANSA AND WHEN RUNNING ANY CODE. ##
+# Change the script_gmsh_ParaPC_orden1.geo to {input_file}.geo to automatically generate the geo file necessary to convert to SOD2D
 
 ## ORDER: check_flat >> RbNDivide >> script_gmsh
 ## Change CreateDomain.py from your ANSA>Scripts>CFD to add new features.
@@ -11,6 +12,7 @@ Then revise the mesh and fix the mesh as necessary.
 
 ### IMPORTANT ###
 After meshing and confirming quality, you should merge the bottom pids to the corresponding sides and the roofs to the pid1.
+
 
 
 Finally run the RbNDivide
