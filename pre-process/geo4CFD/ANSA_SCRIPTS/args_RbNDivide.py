@@ -196,6 +196,8 @@ def main(input_file,output_name=output_name, output_path=output_path):
 	
 	#Split to Hexa
 	splitTOhexa()
+      
+	print("Outputting CGNS file... to " + output_path + output_name + ".cgns")
 	
 	#Output CGNS
 	base.OutputCGNS(
