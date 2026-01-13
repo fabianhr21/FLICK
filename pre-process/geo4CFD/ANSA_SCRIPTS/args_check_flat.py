@@ -195,6 +195,75 @@ def get_args(input_file, working_directory, target_path):
     print(f"Target path: {target_path}")
     return input_file, working_directory, target_path
 
+def orXYZ(xchecked, ychecked, zchecked, xstatus, ystatus, zstatus, xval, yval, zval):
+	base.BlockRedraws(True)
+	deck = constants.OPENFOAM
+	base.SetCurrentMenu("MESH")
+
+	entities = []
+	type = ["SHELL", "SOLID"]
+	faces = base.CollectEntities(deck, None, "FACE", filter_visible = True)
+	shells = base.CollectEntities(deck, None, type, filter_visible = True)
+	for face in faces:
+		val = base.GetEntityCardValues(deck, face, ("Meshed With", ))
+		if(val["Meshed With"] == "UNMESHED"):	
+			entities.append(face)
+	for shell in shells:
+		entities.append(shell)
+	if not entities:
+		print("There are no visible Shells,Solids or Faces")
+		print("Script execution stopped")
+		base.BlockRedraws(False)		
+		return True
+
+#	print(str(xchecked)+" , "+str(ychecked)+","+str(zchecked)+", "+xstatus+", "+ystatus+", "+zstatus+", "+str(xval)+", "+str(yval)+", "+str(zval))
+	xcollected = []
+	ycollected = []
+	zcollected = []
+#If X is checked then the code below will be executed
+	if(xchecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, xstatus, xval, x)
+			if ret is not None:
+				xcollected.append(ret)
+	base.Not(xcollected)
+	
+#If Y is checked then the code below will be executed
+	if(ychecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, ystatus, yval, y)
+			if ret is not None:
+				ycollected.append(ret)
+	base.Not(ycollected)
+	
+#If Z is checked then the code below will be executed
+	if(zchecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, zstatus, zval, z)
+			if ret is not None:
+				zcollected.append(ret)
+	base.Not(zcollected)    
+	base.BlockRedraws(False)	
+	
+def _main_core(iso_ent, status, user_val, cog_val):
+#We perform exactly the opposite action
+#Since we work on visible entities and we need to isolate first in X then in Y and at the end in Z
+#We cannot run the OR function. For this reason we run NOT, but on the exactly opposite directions!
+	if(status == "Less than"):
+		if(cog_val > user_val):
+			collected = iso_ent
+			return collected
+		else:
+			return None
+	else:
+		if(cog_val < user_val):
+			collected = iso_ent
+			return collected
+		else:
+			return None
 
 def main(input_file_dir, working_directory, target_path):
 
@@ -300,8 +369,8 @@ def main(input_file_dir, working_directory, target_path):
     sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
     
     #Uses STL algorith to recover exact geometry
-    #mesh.AspacingSTL('1%', 50, 0, 0.001)
-    mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    mesh.AspacingSTL('1%', 50, 0, 0.001)
+    # mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -426,8 +495,56 @@ def main(input_file_dir, working_directory, target_path):
 
     domain_file.close()
 
+    bottom_ents = []
+    base.All()
+    # Select bottom inlet
+    orXYZ(1,0,1,"Less than","Less than","Less than",-xn+10,1,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':14})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    
+    base.All()
+    # Select bottom outlet
+    orXYZ(1,0,1,"Greater than","Greater than","Less than",xn-10,1,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':12})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    
+    base.All()
+    # Select bottom north
+    orXYZ(0,1,1,"","Greater than","Less than",0,yn-10,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':15})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    
+    base.All()
+    # Select bottom south
+    orXYZ(0,1,1,"","Less than","Less than",0,-yn+10,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':13})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    base.Or(bottom_ents)
+    
+    mesh.ReadMeshParams(params)
+    mesh.CreateFreeMesh()
+
     # Change geo file with y_length
-    generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
+    if os.path.exists(target_path+input_file+".geo"):
+        generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
+    else:
+        print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
 
     # Save
     base.SaveAs(target_path+input_file+".ansa")

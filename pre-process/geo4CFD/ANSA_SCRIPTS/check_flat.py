@@ -12,9 +12,9 @@ import sys
 
 deck = constants.OPENFOAM
 params = "/home/fabianh/ANSA/Data/scripts_final/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/GEO_CASES/BARCELONA/"
-input_file = "bcn_Buildings"
-target_path = "/home/fabianh/GEO_CASES/BARCELONA/"
+working_directory = "/home/fabianh/FLICK/"
+input_file = "grid_of_cubes"
+target_path = "/home/fabianh/FLICK/"
 h_max = 150
 
 def generate_geo(geo_script, input_file,y_length):
@@ -196,6 +196,77 @@ def get_args(input_file, working_directory, target_path):
     return input_file, working_directory, target_path
 
 
+def orXYZ(xchecked, ychecked, zchecked, xstatus, ystatus, zstatus, xval, yval, zval):
+	base.BlockRedraws(True)
+	deck = constants.OPENFOAM
+	base.SetCurrentMenu("MESH")
+
+	entities = []
+	type = ["SHELL", "SOLID"]
+	faces = base.CollectEntities(deck, None, "FACE", filter_visible = True)
+	shells = base.CollectEntities(deck, None, type, filter_visible = True)
+	for face in faces:
+		val = base.GetEntityCardValues(deck, face, ("Meshed With", ))
+		if(val["Meshed With"] == "UNMESHED"):	
+			entities.append(face)
+	for shell in shells:
+		entities.append(shell)
+	if not entities:
+		print("There are no visible Shells,Solids or Faces")
+		print("Script execution stopped")
+		base.BlockRedraws(False)		
+		return True
+
+#	print(str(xchecked)+" , "+str(ychecked)+","+str(zchecked)+", "+xstatus+", "+ystatus+", "+zstatus+", "+str(xval)+", "+str(yval)+", "+str(zval))
+	xcollected = []
+	ycollected = []
+	zcollected = []
+#If X is checked then the code below will be executed
+	if(xchecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, xstatus, xval, x)
+			if ret is not None:
+				xcollected.append(ret)
+	base.Not(xcollected)
+	
+#If Y is checked then the code below will be executed
+	if(ychecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, ystatus, yval, y)
+			if ret is not None:
+				ycollected.append(ret)
+	base.Not(ycollected)
+	
+#If Z is checked then the code below will be executed
+	if(zchecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, zstatus, zval, z)
+			if ret is not None:
+				zcollected.append(ret)
+	base.Not(zcollected)    
+	base.BlockRedraws(False)	
+	
+def _main_core(iso_ent, status, user_val, cog_val):
+#We perform exactly the opposite action
+#Since we work on visible entities and we need to isolate first in X then in Y and at the end in Z
+#We cannot run the OR function. For this reason we run NOT, but on the exactly opposite directions!
+	if(status == "Less than"):
+		if(cog_val > user_val):
+			collected = iso_ent
+			return collected
+		else:
+			return None
+	else:
+		if(cog_val < user_val):
+			collected = iso_ent
+			return collected
+		else:
+			return None
+
+
 def main():
 
     # # Take the last part of the path as input file name without extension
@@ -300,8 +371,8 @@ def main():
     sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
     
     #Uses STL algorith to recover exact geometry
-    #mesh.AspacingSTL('1%', 50, 0, 0.001)
-    mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    mesh.AspacingSTL('1%', 50, 0, 0.001)
+    # mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -408,7 +479,6 @@ def main():
     arg3 = {}
     arg3['Normal'] = (0.0, 0.0, 0.0, )
     cons = base.ConsProject(entities=morph_perimeters, faces_array=in_out_faces, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
-    base.Or(cons[0])
 
     # Save domain dimensions
     domain_file = open(target_path+"domain_dimensions.txt", "w")
@@ -425,17 +495,61 @@ def main():
     domain_file.write(f"Number in y: {y_length_domain/12}\n")
 
     domain_file.close()
+    
+    bottom_ents = []
+    base.All()
+    # Select bottom inlet
+    orXYZ(1,0,1,"Less than","Less than","Less than",-xn+10,1,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':14})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    
+    base.All()
+    # Select bottom outlet
+    orXYZ(1,0,1,"Greater than","Greater than","Less than",xn-10,1,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':12})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    
+    base.All()
+    # Select bottom north
+    orXYZ(0,1,1,"","Greater than","Less than",0,yn-10,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':15})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    
+    base.All()
+    # Select bottom south
+    orXYZ(0,1,1,"","Less than","Less than",0,-yn+10,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    base.SetEntityCardValues(deck, ent[0], {'PID':13})
+    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+    mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+    mesh.NumberPerimeters([cons[1],cons[3]], "4")
+    bottom_ents.append(ent[0])
+    base.Or(bottom_ents)
+    
+    mesh.ReadMeshParams(params)
+    mesh.CreateFreeMesh()
 
     # Change geo file with y_length
     if os.path.exists(target_path+input_file+".geo"):
         generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
     else:
         print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
-
+    
     # Save
     base.SaveAs(target_path+input_file+".ansa")
     print (input_file, "saved\n")    
-
 
 if __name__ == '__main__':
     main()

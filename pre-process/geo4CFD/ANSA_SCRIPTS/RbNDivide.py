@@ -11,6 +11,7 @@ import math
 deck = constants.OPENFOAM
 output_path = "/home/fabianh/ANSA/Data/cedval/"
 output_name = "cedval14"
+distance = -5000  # Precursor length spanwise
 
 def splitTOhexa():
 	m =utils.Messenger()
@@ -150,7 +151,7 @@ def main():
 	base.GeoTranslate("COPY","AUTO_OFFSET","SAME PART","COPY",-100,0,0,inlet,keep_connectivity=True,draw_results=False)
 	
 	# # Precursor parameters
-	distance = -5000
+	# distance = -5000
 	element_length = 20
 
 	# Create Precursor
