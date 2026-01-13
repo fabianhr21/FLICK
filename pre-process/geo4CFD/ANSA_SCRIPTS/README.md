@@ -9,4 +9,8 @@
 After check flat you should add the meshing and volume scenarios and assign the PIDs of your domains to BATCH MESH.
 Then revise the mesh and fix the mesh as necessary.
 
+### IMPORTANT ###
+After meshing and confirming quality, you should merge the bottom pids to the corresponding sides and the roofs to the pid1.
+
+
 Finally run the RbNDivide
