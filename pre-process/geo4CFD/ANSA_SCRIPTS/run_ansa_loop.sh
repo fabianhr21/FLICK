@@ -1,21 +1,27 @@
 #!/bin/bash
 
-input_dir="/home/fabianh/GEO_CASES/"
-city="BARCELONA"
-scripts_final="/home/fabianh/ANSA/Data/scripts_final/"
+input_dir="/home/fabianh/ANSA/CASES_MESHES/"
+working_dir="/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
+cities=("MADRID" "ZARAGOZA")
+scripts_final="./"
+ansa_path=/apps/ANSA/24.1.2/ansa_v24.1.2/ansa64.sh
 
-for d in $input_dir$city/*/ ; do
-    # Ignore __pycache__ directories
-    [[ "$d" == *"__pycache__"* ]] && continue
-    # echo "Processing directory: $d"
-    dirname=$(basename "$d")
-    buildings_file="${d}output/${dirname}_Buildings.stl"
-    echo "Using buildings file: $buildings_file"
-    # Copy geo file from scripts_final
-    cp "${scripts_final}script_gmsh_ParaPC_orden1.geo" "${d}output/${dirname}_Buildings.geo"
-    # echo "RUnning Path: '${d}output/'"
-    ~/ANSA/BETA_CAE_Systems24.1/ansa_v24.1.2/ansa64.sh -nogui -noopencl -execscript "args_check_flat.py|main('${buildings_file}','${d}output/','${d}output/')"
+for city in "${cities[@]}"; do
+    echo "Processing city: $city"
+    for d in $input_dir$city/*/ ; do
+        # Ignore __pycache__ directories
+        [[ "$d" == *"__pycache__"* ]] && continue
+        # echo "Processing directory: $d"
+        dirname=$(basename "$d")
+        buildings_file="${d}output/${dirname}_Buildings.stl"
+        echo "Using buildings file: $buildings_file"
+        # Copy geo file from scripts_final
+        cp "${scripts_final}script_gmsh_ParaPC_orden1.geo" "${d}output/${dirname}_Buildings.geo"
+        # echo "RUnning Path: '${d}output/'"
+        $ansa_path -nogui -noopencl -execscript "args_check_flat.py|main('${buildings_file}','${working_dir}','${d}output/','${d}output/')"
+        # wait until the process is done
+        #wait
+    done
 done
 
-# FOr makinf the precursor and split2hexa
-#~/ANSA/BETA_CAE_Systems24.1/ansa_v24.1.2/ansa64.sh -nogui -noopencl -execscript "RbNDivide.py|main('/home/fabianh/GEO_CASES/BARCELONA/267-43/output/267-43_Buildings.ansa','267-43_Buildings','/home/fabianh/GEO_CASES/BARCELONA/267-43/output/')"
+# /apps/ANSA/24.1.2/ansa_v24.1.2/ansa64.sh -nogui -noopencl -execscript "args_check_flat.py|main('/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/652-227_Buildings.ansa','/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/','/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/','/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/')"

@@ -11,7 +11,7 @@ import argparse
 import sys
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/ANSA/Data/scripts_final/MESH_PARAMETERS_MANDATORY.ansa_mpar"
+params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
 working_directory = "/home/fabianh/GEO_CASES/BARCELONA/"
 input_file = "bcn_Buildings"
 target_path = "/home/fabianh/GEO_CASES/BARCELONA/"
@@ -265,19 +265,20 @@ def _main_core(iso_ent, status, user_val, cog_val):
 		else:
 			return None
 
-def main(input_file_dir, working_directory, target_path):
+def main(input_file_dir, working_directory,input_path, target_path):
 
     # Take the last part of the path as input file name without extension
     input_file = os.path.splitext(os.path.basename(input_file_dir))[0]
 
     print(f"Input file: {input_file}")
     print(f"Working directory: {working_directory}")
+    print(f"Input path: {input_path}")
     print(f"Target path: {target_path}")
 	# Input StereoLithography from City4CFD
     session.New("discard")
     mesh.ReadMeshParams(params)
     input = base.InputStereoLithography(
-        working_directory + input_file + ".stl" , elements_id="offset-freeid"
+        input_path + input_file + ".stl" , elements_id="offset-freeid"
     )
 	# Select working parts and recognize FM perimeters
     working_parts = base.CollectEntities(deck, None, "ANSAPART", filter_visible=True)
@@ -369,8 +370,8 @@ def main(input_file_dir, working_directory, target_path):
     sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
     
     #Uses STL algorith to recover exact geometry
-    #mesh.AspacingSTL('1%', 50, 0, 0.001)
-    mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    mesh.AspacingSTL('5%', 50, 0, 0.0001)
+    # mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -383,7 +384,7 @@ def main(input_file_dir, working_directory, target_path):
     print("Elements released from faces\n")
     
     # Describe the solid
-    mesh.IntersectSolidDescription(0, fuse_distance = 0.5, improve_mesh_quality=False)
+    mesh.IntersectSolidDescription(0, fuse_distance = 0.01, improve_mesh_quality=False)
     print("Solid description of the buildings done\n")
     
     # Create surface geometry
@@ -494,54 +495,75 @@ def main(input_file_dir, working_directory, target_path):
     domain_file.write(f"Number in y: {y_length_domain/12}\n")
 
     domain_file.close()
+    
+    if errors != None:
+        base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "ERRORS"})
 
+
+    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
+    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
+    
+    # Save
+    base.SaveAs(target_path+input_file+".ansa")
+    print (input_file, "saved\n")    
+    
     bottom_ents = []
     base.All()
     # Select bottom inlet
-    orXYZ(1,0,1,"Less than","Less than","Less than",-xn+10,1,50)
+    orXYZ(1,0,1,"Less than","Less than","Less than",x_min - xn+50,1,50)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
-    base.SetEntityCardValues(deck, ent[0], {'PID':14})
-    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-    mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//12}")
-    mesh.NumberPerimeters([cons[1],cons[3]], "4")
-    bottom_ents.append(ent[0])
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':14})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom inlet face not found")
     
     base.All()
     # Select bottom outlet
-    orXYZ(1,0,1,"Greater than","Greater than","Less than",xn-10,1,50)
+    orXYZ(1,0,1,"Greater than","Greater than","Less than",x_max+xp-50,1,50)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
-    base.SetEntityCardValues(deck, ent[0], {'PID':12})
-    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-    mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//12}")
-    mesh.NumberPerimeters([cons[1],cons[3]], "4")
-    bottom_ents.append(ent[0])
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':12})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom outlet face not found")
     
     base.All()
     # Select bottom north
-    orXYZ(0,1,1,"","Greater than","Less than",0,yn-10,50)
+    orXYZ(0,1,1,"Greater than","Greater than","Less than",1,y_max+yp-50,50)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
-    base.SetEntityCardValues(deck, ent[0], {'PID':15})
-    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-    mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
-    mesh.NumberPerimeters([cons[1],cons[3]], "4")
-    bottom_ents.append(ent[0])
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':15})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom north face not found")
     
+
     base.All()
     # Select bottom south
-    orXYZ(0,1,1,"","Less than","Less than",0,-yn+10,50)
+    orXYZ(0,1,1,"Less than","Less than","Less than",1,y_min-yn+50,50)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
-    base.SetEntityCardValues(deck, ent[0], {'PID':13})
-    cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-    mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
-    mesh.NumberPerimeters([cons[1],cons[3]], "4")
-    bottom_ents.append(ent[0])
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':13})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom south face not found") 
     base.Or(bottom_ents)
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
-
-    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
-    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
 
     # Change geo file with y_length
     if os.path.exists(target_path+input_file+".geo"):
