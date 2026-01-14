@@ -1,34 +1,18 @@
 #!/usr/bin/env python3
 """
-Script: Clip a LAZ file to a defined area and extract OSM building footprints for that same extent,
-ensuring both point cloud and footprints share the same CRS. Outputs footprints as GeoJSON.
-Supports:
-  - rectangular (bbox)
-  - polygon GeoJSON
-  - circular radius clipping (default center at domain midpoint, overrideable)
-
-Default CRS: Mexico ITRF2008 / UTM zone 14N (EPSG:6369)
+Script: Clip a LAZ file to a defined area and extract OSM building footprints for that same extent.
+Generates a CITY4CFD config.json file for downstream ETL processing.
 
 Dependencies:
-  - QGIS (PyQGIS + Processing plugin)
-  - LAStools (lasclip) or PDAL for LAZ clipping
-  - OSMnx for downloading OSM footprints
+  - LAStools or PDAL
+  - OSMnx
   - GeoPandas, Shapely, Fiona, pyproj, laspy
+  - Polyprep (local module)
 """
 import os
 import sys
-sys.path.append('./polyprep')
-from polyprep import process_polygons
 import argparse
 import subprocess
-
-
-# Define default CRS and CLI binaries
-DEFAULT_CRS = 'EPSG:4326'  # Mexico ITRF2008 / UTM 14N
-PDAL_CMD = 'pdal'
-os.environ['PDAL_DRIVER_PATH'] = '/home/fabianh/anaconda3/envs/qgis_env/bin/pdal'
-
-# OSM and spatial libraries
 import osmnx as ox
 from pyproj import CRS
 import geopandas as gpd
@@ -37,8 +21,102 @@ from shapely.ops import unary_union
 import laspy
 import pdal
 import json
+import math
 
-os.environ['PDAL_DRIVER_PATH'] = '/usr/lib/pdal'
+# Add polyprep to path - ensure this folder exists relative to script execution
+sys.path.append('./polyprep')
+try:
+    from polyprep import process_polygons
+except ImportError:
+    print("Warning: 'polyprep' module not found. Polygon processing step might fail.")
+
+# Define default CRS
+DEFAULT_CRS = 'EPSG:4326' 
+
+# NOTE: Commented out for portability. valid PDAL environment usually handles this.
+# os.environ['PDAL_DRIVER_PATH'] = '/home/fabianh/anaconda3/envs/qgis_env/bin/pdal'
+
+def create_city4cfd_config(output_dir, center_point, radius, ground_laz, building_laz, polygon_geojson, output_name="mesh_mty_topo"):
+    """
+    Generates the config.json file for CITY4CFD using the paths and coordinates 
+    derived from the processing steps.
+    """
+    
+    # Ensure we use absolute paths for the ETL to avoid CWD issues
+    abs_ground = os.path.abspath(ground_laz)
+    abs_build = os.path.abspath(building_laz)
+    abs_poly = os.path.abspath(polygon_geojson)
+    
+    # If radius wasn't provided (e.g. BBOX mode), default to 400 or calculate from bounds
+    roi_radius = radius if radius else 400
+
+    config = {
+        "point_clouds": {
+            "ground": abs_ground,
+            "buildings": abs_build
+        },
+        "polygons": [
+            {
+                "type": "Building",
+                "path": abs_poly,
+                "unique_id": "gid",
+                "height_attribute": "height",
+                "floor_attribute": "num_floors",
+                "floor_height": 3,
+                "height_attribute_advantage": False,
+                "avoid_bad_polys": True,
+                "refine": False
+            }
+        ],
+        "reconstruction_regions": [
+            {
+                "influence_region": roi_radius,
+                "lod": "1.2",
+                "complexity_factor": 0.1,
+                "lod13_step_height": 3,
+                "validate": True,
+                "enforce_validity": "lod1.2",
+                "relative_alpha": 500,
+                "relative_offset": 1200,
+                "skip_gap_closing": False,
+                "import_advantage": False
+            }
+        ],
+        "point_of_interest": [center_point.x, center_point.y],
+        "domain_bnd": None,
+        "top_height": 300,
+        "buffer_region": -20,
+        "reconstruct_boundaries": False,
+        "bnd_type_bpg": "Rectangle",
+        "bpg_blockage_ratio": False,
+        "flow_direction": [1, 0],
+        "bpg_domain_size": [20, 30, 40, 20],
+        "terrain_thinning": 80,
+        "smooth_terrain": {
+            "iterations": 1,
+            "max_pts": 250000
+        },
+        "flat_terrain": True,
+        "building_percentile": 90,
+        "min_height": 2,
+        "min_area": 50,
+        "reconstruct_failed": False,
+        "intersect_buildings_terrain": False,
+        "edge_max_len": 5,
+        "output_file_name": output_name,
+        "output_format": "stl",
+        "output_separately": True,
+        "output_log": True,
+        "log_file": "logFile.log"
+    }
+
+    config_path = os.path.join(output_dir, "config.json")
+    
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=4)
+        
+    print(f"CITY4CFD configuration generated at: {config_path}")
+    return config_path
 
 def get_laz_crs(laz_path):
     las = laspy.read(laz_path)
@@ -61,37 +139,35 @@ def merge_laz_files(input_directory, output_laz):
     if os.path.exists(output_laz):
         os.remove(output_laz)
 
-    laz_files = [os.path.join(input_directory, f) for f in os.listdir(input_directory) if (f.endswith('.laz') or f.endswith('.las') and not ('.copc' in f))] 
+    laz_files = [os.path.join(input_directory, f) for f in os.listdir(input_directory) 
+                 if (f.endswith('.laz') or f.endswith('.las')) and not ('.copc' in f)] 
+    
     if not laz_files:
         raise ValueError("No LAZ files found in the input directory.")
     
     pipeline_steps = (
         [{"type": "readers.las", "filename": f} for f in laz_files]
-        + [{"type": "filters.merge"}]      # concatenate the point streams
+        + [{"type": "filters.merge"}]
         + [{
             "type": "writers.las",
             "filename": output_laz
         }]
     )
 
-    # ---- 3. run it ---------------------------------------------------------------
     pipeline = pdal.Pipeline(json.dumps(pipeline_steps))
-    count = pipeline.execute()   # run! returns number of points written
+    count = pipeline.execute()
 
-    print(f"Merged {len(laz_files)} files → {output_laz} ({count:,} points)")
-    # Remove .copc.las files if they exist
+    print(f"Merged {len(laz_files)} files -> {output_laz} ({count:,} points)")
+    
+    # Cleanup copc files
     for f in laz_files:
-        if f.endswith('.copc.las'):
-            os.remove(f)
-    print(f"Removed .copc.las files from {input_directory}")    
-        
+        copc_file = f + ".copc.las" # Standard pdal naming often appends
+        if f.endswith('.copc.las'): 
+             os.remove(f)
+    
     return output_laz
 
-
 def load_area_extent_geojson(geojson_path, target_crs):
-    """
-    Loads a GeoJSON polygon via GeoPandas, reprojects to target_crs, returns bounds.
-    """
     gdf = gpd.read_file(geojson_path)
     if gdf.crs != target_crs:
         gdf = gdf.to_crs(target_crs)
@@ -101,51 +177,39 @@ def compute_circle_bounds(center, radius):
     x, y = center
     return (x - radius, y - radius, x + radius, y + radius)
 
-
-def clip_laz_with_processing(bbox, input_laz, output_laz):
-    rect = QgsRectangle(*bbox)
-    processing.run("lastools:lasclip", {
-        'INPUT': input_laz,
-        'BOX': rect,
-        'OUTPUT': output_laz
-    })
-
-
 def clip_laz_cli_or_pdal(bbox, input_laz, output_laz, poly=False):
     xmin, ymin, xmax, ymax = bbox
     bounds = f"([{xmin},{xmax}],[{ymin},{ymax}])"
     try:
         if poly:
             try:
-                print('Trying to create polygon')
-                # Usamos un polígono WKT
+                # PDAL crop expects WKT
+                print(f'Attempting Polygon Crop with WKT...')
                 pipeline_json = f"""
                 [
                 "{input_laz}",
                 {{
                     "type": "filters.crop",
-                    "polygon": {repr(poly)}
+                    "polygon": "{poly}" 
                 }},
                 "{output_laz}"
                 ]
                 """
-                print(json.loads(pipeline_json) )
-                print('hasta aqui 2')
-            except:
-                print('Error creating polygon, using bounds instead')
-                # Usamos un recorte rectangular con bounds
+                # Validate JSON structure before running
+                json.loads(pipeline_json) 
+            except Exception as e:
+                print(f'Error structuring polygon pipeline: {e}. Falling back to bounds.')
                 pipeline_json = f"""
                 [
-                "{input_laz}",
-                {{
+                  "{input_laz}",
+                  {{
                     "type": "filters.crop",
                     "bounds": "{bounds}"
-                }},
-                "{output_laz}"
+                  }},
+                  "{output_laz}"
                 ]
                 """
         else:
-            # Usamos un recorte rectangular con bounds
             pipeline_json = f"""
             [
               "{input_laz}",
@@ -164,54 +228,15 @@ def clip_laz_cli_or_pdal(bbox, input_laz, output_laz, poly=False):
     except Exception as e:
         sys.stderr.write(f"PDAL clipping failed: {e}\n")
 
-
-# def fetch_osm_buildings(bbox, target_crs, circle=None):
-#     """
-#     bbox: (xmin, ymin, xmax, ymax) in **projected CRS** (e.g. EPSG:32614)
-#     target_crs: final CRS for output buildings (usually same afrom shapely.geometry import boxs bbox)
-#     circle: shapely.geometry.Polygon in same CRS as bbox (optional)
-#     """
-#     # Convert bbox to polygon and reproject to EPSG:4326
-#     bbox_polygon = box(*bbox)
-#     bbox_gdf = gpd.GeoDataFrame(geometry=[bbox_polygon], crs=target_crs)
-#     bbox_gdf_wgs = bbox_gdf.to_crs(epsg=4326)
-#     # Extract reprojected bounds: (west, south, east, north)
-#     west, south, east, north = bbox_gdf_wgs.total_bounds
-#     bbox_tuple = (west, south, east, north)
-#     # Download buildings from OSM
-#     tags = {'building': True}
-#     gdf = ox.features_from_bbox(bbox_tuple, tags=tags)
-#     # Keep only polygon geometries
-#     gdf = gdf[gdf.geom_type.isin(['Polygon'])]
-#     # Reproject to target_crs
-#     gdf = gdf.to_crs(target_crs)
-#     # Optional: filter by circle
-#     if circle:
-#         centroids = gdf.geometry.centroid
-#         gdf = gdf[centroids.within(circle)]
-#     if gdf.empty:
-#         print("Warning: No geometries found after OSM fetch and filtering.")
-
-#     # Converto to MultiPolygon
-#     # gdf['geometry'] = gdf['geometry'].apply(lambda geom: geom if geom.geom_type == 'MultiPolygon' else shape(geom).buffer(0))
-#     return gdf
-
-
 def fetch_osm_buildings(bbox, target_crs, circle=None):
-    """
-    bbox: (xmin, ymin, xmax, ymax) in projected CRS (e.g. EPSG:32614)
-    target_crs: output CRS (usually same as bbox)
-    circle: shapely.geometry.Polygon to spatially filter buildings (optional)
-    """
     # Convert bbox to polygon and reproject to EPSG:4326 for OSM
     bbox_polygon = box(*bbox)
     bbox_gdf = gpd.GeoDataFrame(geometry=[bbox_polygon], crs=target_crs)
     bbox_gdf_wgs = bbox_gdf.to_crs(epsg=4326)
     west, south, east, north = bbox_gdf_wgs.total_bounds
-    bbox_tuple = (west, south, east, north)
-    # Download building footprints from OSM
+    
     tags = {'building': True}
-    gdf = ox.features_from_bbox(bbox_tuple, tags=tags)
+    gdf = ox.features_from_bbox((west, south, east, north), tags=tags)
 
     # Keep only Polygon and MultiPolygon geometries
     gdf = gdf[gdf.geom_type.isin(['Polygon', 'MultiPolygon'])]
@@ -224,8 +249,6 @@ def fetch_osm_buildings(bbox, target_crs, circle=None):
     if circle:
         centroids = gdf.geometry.centroid
         gdf = gdf[centroids.within(circle)]
-    # print("Head: ", gdf.columns)
-    # print("Head: ", gdf.head())
 
     # Clean and standardize properties
     gdf = gdf.reset_index(drop=True)
@@ -244,60 +267,44 @@ def fetch_osm_buildings(bbox, target_crs, circle=None):
     return gdf
 
 def find_center_point_within_domain(gdf):
-    """
-    Returns the center-most point that lies within the union of all geometries in the GeoDataFrame.
-    """
     if gdf.empty:
         return None
-
-    # Union all building polygons into a single geometry
     unified = unary_union(gdf.geometry)
-
-    # Use representative_point() to ensure the point is inside the polygon
     center_point = unified.representative_point()
-    # ONly take 2 decimals
     center_point = Point(round(center_point.x, 2), round(center_point.y, 2))
-
     return center_point
 
 def separate_laz_file(input_laz, output_dir=None):
     """
-    Separate a LAZ file into ground and building classes.
-    Saves new LAZ files with filtered points.
+    Separate a LAZ file into ground (2) and building (6) classes.
     """
-
     las = laspy.read(input_laz)
 
-    # Filtrar por clasificación
+    # Filter by classification
     ground_points = las.points[las.classification == 2]
     building_points = las.points[las.classification == 6]
 
-    # Copiar el header original
     header = las.header
-
-    # Determinar nombres de salida
     base_name = os.path.splitext(os.path.basename(input_laz))[0]
     output_dir = output_dir or os.path.dirname(input_laz)
 
     ground_laz = os.path.join(output_dir, f"{base_name}_ground.laz")
     building_laz = os.path.join(output_dir, f"{base_name}_buildings.laz")
 
-    # Guardar puntos ground
+    # Save Ground
     with laspy.open(ground_laz, mode='w', header=header) as writer:
         writer.write_points(ground_points)
         print(f"Ground points saved to {ground_laz}")
 
-    # Guardar puntos buildings
+    # Save Buildings
     with laspy.open(building_laz, mode='w', header=header) as writer:
         writer.write_points(building_points)
         print(f"Building points saved to {building_laz}")
 
     return ground_laz, building_laz
 
-
-
 def main():
-    DEFAULT_CRS = 'EPSG:6369'  # Mexico ITRF2008 / UTM 14N
+    DEFAULT_CRS = 'EPSG:6369'
 
     parser = argparse.ArgumentParser(description="Clip LAZ and fetch OSM buildings in same CRS")
     parser.add_argument('--input','-i', help="Input LAZ file")
@@ -322,26 +329,19 @@ def main():
     args.output_dir = os.path.join(args.output_dir, 'output')
     print(f"Output directory: {args.output_dir}")
 
-        # Check if input is a directory or file
+    # Handle Input (Dir vs File)
     if args.input_dir:
         if os.path.isdir(args.input_dir):
-            laz_files = [os.path.join(args.input_dir, f) for f in os.listdir(args.input_dir) if (f.endswith('.laz') or f.endswith('.las'))]
-            if not laz_files:
-                raise ValueError("No LAZ files found in the input directory.")
-            # Merge LAZ files
             args.input = merge_laz_files(args.input_dir, os.path.join(args.output_dir, args.output_filename + '_merged.laz'))
         else:
-            raise ValueError("Input directory does not exist or is not a directory.")
-    # args.input = os.path.join(args.output_dir, args.output_filename + '_merged.laz')
-
-
+            raise ValueError("Input directory does not exist.")
+    
     # Determine CRS
     if args.crs:
         laz_crs = args.crs
     else:
         try:
             laz_crs = get_laz_crs(args.input)
-
         except ValueError:
             laz_crs = DEFAULT_CRS
             sys.stderr.write(f"Warning: using default CRS {DEFAULT_CRS}\n")
@@ -349,11 +349,14 @@ def main():
 
     # Determine bounds and optional circle
     circle = None
+    circle_wkt = None
+    
     if args.area_geojson:
         bounds = load_area_extent_geojson(args.area_geojson, laz_crs)
     elif args.bbox:
         bounds = args.bbox
     else:
+        # Radius Mode logic
         if args.center:
             center = tuple(args.center)
         else:
@@ -363,31 +366,57 @@ def main():
                 las = laspy.read(args.input)
                 dom = (las.header.min[0], las.header.min[1], las.header.max[0], las.header.max[1])
             center = ((dom[0]+dom[2]) / 2, (dom[1]+dom[3]) / 2)
+        
         bounds = compute_circle_bounds(center, args.radius)
         circle = Point(center).buffer(args.radius, resolution=8)
         circle_wkt = circle.wkt
 
     clipped_laz = os.path.join(args.output_dir, args.output_filename + '_merged.laz')
     buildings_geojson = os.path.join(args.output_dir, 'osm_buildings.geojson')
+    polyprep_geojson = os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson')
 
-    # Clip LAZ with fallback
+    # Clip LAZ
     clip_laz_cli_or_pdal(bounds, args.input, clipped_laz, circle_wkt)
-    separate_laz_file(clipped_laz, output_dir=args.output_dir)
+    
+    # Separate Ground/Building classes
+    ground_path, building_path = separate_laz_file(clipped_laz, output_dir=args.output_dir)
 
     # Fetch & save OSM buildings
     buildings = fetch_osm_buildings(bounds, laz_crs, circle)
     buildings.to_file(buildings_geojson, driver='GeoJSON')
     print(f"OSM building footprints saved to {buildings_geojson}")
 
-    # Find center point within domain
+    # Find center point for Config
     center_point = find_center_point_within_domain(buildings)
-    print(f"Center point within domain: {center_point}")
+    
+    # Fallback if no buildings found to define center
+    if center_point is None:
+        cx = (bounds[0] + bounds[2]) / 2
+        cy = (bounds[1] + bounds[3]) / 2
+        center_point = Point(cx, cy)
+        print(f"No buildings found. Using BBOX center: {center_point}")
+    else:
+        print(f"Center point derived from buildings: {center_point}")
 
-    # Applying polyprep to osm_buildings
-    print("Applying polyprep to osm_buildings with arbitrary parameters...")
-    process_polygons(buildings_geojson, os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson'), buffer_size=2.0, apply_convex_hull=False,remove_holes=2, simplification_tol=0.5)
-    print(f"Polyprep applied to osm_buildings, saving to {os.path.join(args.output_dir, 'osm_buildings_polyprep.geojson')}")
+    # Apply polyprep
+    print("Applying polyprep to osm_buildings...")
+    try:
+        process_polygons(buildings_geojson, polyprep_geojson, buffer_size=2.0, apply_convex_hull=False, remove_holes=2, simplification_tol=0.5)
+        print(f"Polyprep saved to {polyprep_geojson}")
+    except Exception as e:
+        print(f"Polyprep failed ({e}). Using raw OSM file for config.")
+        polyprep_geojson = buildings_geojson
+
+    # --- NEW: Generate CITY4CFD Configuration ---
+    create_city4cfd_config(
+        output_dir=args.output_dir,
+        center_point=center_point,
+        radius=args.radius,
+        ground_laz=ground_path,
+        building_laz=building_path,
+        polygon_geojson=polyprep_geojson,
+        output_name=args.output_filename
+    )
 
 if __name__ == '__main__':
     main()
-
