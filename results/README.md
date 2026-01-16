@@ -6,9 +6,8 @@ the ones it was trained on. As shown in the next picture.
 
 <img width="486" height="390" alt="image" src="https://github.com/user-attachments/assets/0ae35912-8368-4222-9311-be7a9e5ce450" />
 
-
-
-Furthermore, a comparison was made the comparission between high-fidelity simulations performed with SOD2D<sup>2</sup>.
+Furthermore, a comparison was made the comparission between high-fidelity simulations performed with SOD2D<sup>2</sup>. The solver has been
+validated over idealized<sup>3</sup> and realistic<sup>4,</sup><sup>5</sup> urban configurations.
 <img width="1790" height="427" alt="image" src="https://github.com/user-attachments/assets/7e04ff63-facd-4ece-aea3-a28974124ec8" />
 
 Even though the structure of the field seems very similar, the average error is ~40%, and the error is attributed to the complete change in the geometry,
@@ -24,4 +23,10 @@ Available at SSRN: https://ssrn.com/abstract=5970896 or http://dx.doi.org/10.213
 
 [2] Gasparino, L., Spiga, F., & Lehmkuhl, O. (2024). SOD2D: A GPU-enabled spectral finite elements method for compressible scale-resolving simulations. 
 Computer Physics Communications, 297, 109067.
+
+[3] Teng, M., Duró Diaz, J. M., Mestres, E., Muela Castro, J., Lehmkuhl, O., & Rodriguez, I. (2025). Atmospheric boundary layer over urban roughness: Validation of large-eddy simulation. Physics of Fluids, 37(6).
+
+[4] Teng, M., Duro, J. M., Munoz, N., Mestres, E., Muela, J., Lehmkuhl, O., & Rodriguez, I. (2025). Toward high-fidelity simulations of urban flows: mean-flow statistics. In ICHMT DIGITAL LIBRARY ONLINE. Begel House Inc..
+
+[5] Rodríguez, I., Duró, J. M., Mestres, E., Teng, M., & Lehmkuhl, O. (2025). Impact of Wind Direction on Flow Over a Realistic Urban Area: A Large-Eddy Simulation Study. arXiv preprint arXiv:2510.11247.
 
