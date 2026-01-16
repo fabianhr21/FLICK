@@ -124,8 +124,17 @@ def DividePIDbyFaceOrientation(pid_id: int, new_pid_list=None):
     used_buckets = sum(bool(g) for g in groups.values())
     print(f"Divided PID {pid_id} into {used_buckets} orientation‐based PIDs.")
 
-def main(input_file,output_name=output_name, output_path=output_path):
-      
+def main(input_file,dimensions_file,output_name=output_name, output_path=output_path):
+    # Read dimensions .txt file and extract z_length
+	with open(dimensions_file, 'r') as dim_file:
+		lines = dim_file.readlines()
+		for line in lines:
+			if "z_length" in line:
+				z_length = float(line.split(':')[1].strip())
+				print(f"Extracted z_length: {z_length}")
+				print(f"Setting precursor distance to 6h, -{math.floor(6*z_length)}")
+				break
+	distance = -math.floor(6*z_length)
 	# # Load input file
 	base.Open(input_file)
 	base.Clear()

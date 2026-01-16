@@ -9,9 +9,9 @@ import sys
 import math
 
 deck = constants.OPENFOAM
-output_path = "/home/fabianh/ANSA/Data/cedval/"
-output_name = "cedval14"
-distance = -5000  # Precursor length spanwise
+output_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/"
+output_name = "652-227_Buildings"
+distance = -5040  # Precursor length spanwise
 
 def splitTOhexa():
 	m =utils.Messenger()

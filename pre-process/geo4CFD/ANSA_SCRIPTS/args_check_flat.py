@@ -370,8 +370,8 @@ def main(input_file_dir, working_directory,input_path, target_path):
     sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
     
     #Uses STL algorith to recover exact geometry
-    mesh.AspacingSTL('5%', 50, 0, 0.0001)
-    # mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
+    # mesh.AspacingSTL('5%', 50, 0, 0.0001)
+    mesh.AspacingSTL("5%", 50.0, 30.0, 0.1)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -384,7 +384,7 @@ def main(input_file_dir, working_directory,input_path, target_path):
     print("Elements released from faces\n")
     
     # Describe the solid
-    mesh.IntersectSolidDescription(0, fuse_distance = 0.01, improve_mesh_quality=False)
+    mesh.IntersectSolidDescription(0, fuse_distance = 0.5, improve_mesh_quality=False)
     print("Solid description of the buildings done\n")
     
     # Create surface geometry
@@ -416,7 +416,7 @@ def main(input_file_dir, working_directory,input_path, target_path):
     
     # Create groundBuildings
     GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max)
-    
+    print("GroundBuildings created\n")
     # Simplify faces
     ret = mesh.SimplifyMacros(
         "ALL",
