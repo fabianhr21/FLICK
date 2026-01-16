@@ -18,6 +18,8 @@ The next picture shows a diagram of the workflow for preparing any LiDAR dataset
 ## Wind-NN
 The `wind-nn` folder hosts the surrogate neural network used to predict wind behaviour. The model outputs normalized velocity components.
 
+The Wind-NN should be run within the directory 170625_weights, with the weights that must be asked for since they have some weight and should be sent separately.
+
 ## Post-Process
 Scripts in `post-process` scale the predicted wind velocity and generate visualisations.
 
@@ -39,14 +41,11 @@ This installs the required dependencies with `apt`, compiles City4CFD inside `Ci
 Each step can be executed separately. Example commands using the provided `grid_of_cubes.stl` are:
 ```bash
 # Pre-processing
-mpirun -n 1 python pre-process/STL2GeoTool_loop.py -stl_basename grid_of_cubes
-python pre-process/ADD_FEAT.py -stl_basename grid_of_cubes
-
+As a bash script, you can run ./run_stl. Otherwise, you could run the STL2GeoTool_loop.py with the desired arguments. This will output the sample ready to make the wind inference.
 # Inference
-python wind-nn/inference-script.py -data_sample_basename grid_of_cubes
+python wind-nn/170625_weights/inference-script.py -data_sample_basename name
+For this, you should have the weights of the model
 
-# Post-processing
-python post-process/overlap.py -basename grid_of_cubes
 ```
 ### HPC clusters
 The `RUN_WORKFLOW.sh` script wraps the entire process for SLURM clusters. Submit it with the STL base name as argument:
