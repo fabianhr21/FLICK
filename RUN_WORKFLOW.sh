@@ -14,12 +14,10 @@ if [ "$#" -lt 1 ]; then
 fi
 
 BASENAME=$1
+real_path=$(realpath "$BASENAME")
 
 # Run the Python script with srun
-cd Pre-Process
-srun python ./STL2GeoTool_loop.py -stl_basename "$BASENAME"
-srun -n 1 python ./ADD_FEAT.py -stl_basename "$BASENAME"
-cd ../Wind-NN
-srun -n 1 python inference-script.py -data_sample_basename "$BASENAME"
-cd ../Post-Process
-srun -n 1 python overlap.py -basename "$BASENAME"
+cd pre-process/
+python ./STL2GeoTool.py -stl_basename "${BASENAME}" -step_size 64 -stl_dir "../"
+cd ../wind-nn/170625_weights/
+mpirun -n 1 python new-inference-script.py -data_sample_basename "$BASENAME"

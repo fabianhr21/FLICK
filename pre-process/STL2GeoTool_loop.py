@@ -25,7 +25,7 @@ STL_SCALE = 1.0
 DIST_RESOLUTION = 1.0
 
 # Parameters
-WIND_DIRECTION =  [22.5] #, 187.04, 177.39, 194.31] #, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
+WIND_DIRECTION =  [0] #, 187.04, 177.39, 194.31] #, 192.43, 204.27, 184.09, 174.25, 185.76, 181.64, 181.8, 177.15, 172.11, 177.66, 174.09, 221.76, 187.22, 198.28, 181.22, 195.38, 136.49, 187.77] # Rotates geometry to align with wind direction (degrees)
 # WIND_DIRECTION = [0,20,40,60,80]
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STL_DISPLACEMENT = [0, 0, 0.0]

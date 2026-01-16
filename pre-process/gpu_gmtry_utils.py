@@ -6,6 +6,7 @@ import pyQvarsi
 from stl import mesh
 import numpy as np
 from gmtry_utils import rotate_stl, move_stl
+from scipy.spatial import cKDTree
 
 
 mpi_comm = MPI.COMM_WORLD
@@ -72,6 +73,7 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
     subset = points[ini_idx:final_idx + 1]
     mask_L = np.zeros(subset.shape[0])
     height_L = np.zeros(subset.shape[0])
+    distance_L=np.zeros(subset.shape[0])
 
     # h_triangles_gpu = cp.array(h_triangles,dtype=cp.float32)
     horizontal_triangles_gpu = cp.array(horizontal_triangles,dtype=cp.float32)
@@ -84,20 +86,34 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
         else:
             mask_L[idx] = 0
             height_L[idx] = horizontal_triangles[tri_idx][0][2]
-
+        if mask_L[idx]==1:
+                distance_L[idx]=wall_distance_gpu(p,perimeter_gpu)
 
     # Reducir entre procesos
     recv_mask = mpi_comm.allgather(mask_L)
     recv_height = mpi_comm.allgather(height_L)
+    recv_buff_distance = mpi_comm.allgather(distance_L)
 
     mask_G = np.concatenate(recv_mask)
     height_G = np.concatenate(recv_height)
+    distance_G=np.concatenate(recv_buff_distance)
 
     fields = pyQvarsi.Field(xyz=points, ptable=pyQvarsi.PartitionTable.new(1, 1, 0))
     fields['MASK'] = mask_G
     fields['HEGT'] = height_G
+    fields['WDST'] = distance_G
+
+
+    
     return fields
 
+def wall_distance(point,perimeter):
+
+        point_vec=np.tile(point,(perimeter.shape[0],1))
+
+        dist=np.linalg.norm(perimeter-point_vec,axis=1)
+        return np.amin(dist)
+    
 def geometrical_magnitudes_gpu(STL_FILE, target_mesh, stl_angle=[0.0, 0.0, 0.0],
                                 stl_displ=[0.0, 0.0, 0.0], stl_scale=1.0,
                                 dist_resolution=1.0, z_tol=1e-2):
@@ -128,6 +144,9 @@ def geometrical_magnitudes_gpu(STL_FILE, target_mesh, stl_angle=[0.0, 0.0, 0.0],
     count_z_near_zero = np.sum(z_near_zero, axis=1)
     vertical_mask = (count_z_near_zero >= 2) & (count_z_near_zero < 3)
     vertical_triangles = triangles[vertical_mask]
+    
+    # import cupy as cp
+
 
     # Run GPU extractor
     return geometrical_data_extractor_gpu(

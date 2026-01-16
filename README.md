@@ -41,7 +41,7 @@ This installs the required dependencies with `apt`, compiles City4CFD inside `Ci
 Each step can be executed separately. Example commands using the provided `grid_of_cubes.stl` are:
 ```bash
 # Pre-processing
-As a bash script, you can run ./run_stl. Otherwise, you could run the STL2GeoTool_loop.py with the desired arguments. This will output the sample ready to make the wind inference.
+As a bash script, you can run ./run_stl. Otherwise, you could run the STL2GeoTool.py with the desired arguments. This will output the sample ready to make the wind inference.
 # Inference
 python wind-nn/170625_weights/inference-script.py -data_sample_basename name
 For this, you should have the weights of the model

@@ -23,16 +23,16 @@ BASE_FOLDER='./'
 
 
 DATASET_BASE_PATH='../../pre-process/output'
-OUTPUT_PATH = '../output/cedval_2048_ddp/'
-DATA_SAMPLE_BASENAME='cedval_2048'
+OUTPUT_PATH = '../output/grid_of_cubes/'
+DATA_SAMPLE_BASENAME='grid_of_cubes'
 MODEL_BASENAME='generator'
 # MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/serial_batch1/'
-MODEL_LOADING_PATH= '/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/batch1_ddp_loaded/'
+MODEL_LOADING_PATH= './'
 INPUT_FEAT=['MASK','HEGT','WDST'] #having a MASK distinguishing solid and fluid regions at the first position is mandatory.
 TARGET_FEAT=['U','V']
 EXTRA_FEAT=[]
-INPUT_XDIM=2048
-INPUT_YDIM=2048
+INPUT_XDIM=256
+INPUT_YDIM=256
 TARGET_XDIM=256
 TARGET_YDIM=256
 SPACING_X=1.0

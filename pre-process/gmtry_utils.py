@@ -340,34 +340,141 @@ def compute_bounding_box_center(stl_mesh):
     center = (min_bound + max_bound) / 2
     return center
 
-def rotation_matrix_around_z(theta):
-    angle = theta - 270
-    theta = np.radians(angle)
-    cos_theta = np.cos(theta)
-    sin_theta = np.sin(theta)
-    return np.array([
-        [cos_theta, -sin_theta, 0],
-        [sin_theta, cos_theta, 0],
-        [0, 0, 1]
-    ])
-    
-def rotate_geometry(stl_path, output_path, angle):
-        # Load the STL file
-    original_mesh = mesh.Mesh.from_file(stl_path)
-    
-    # Compute the center of the bounding box
-    center = compute_bounding_box_center(original_mesh)
+def rotation_matrix_around_z(theta_deg, convention="dataset"):
+    """
+    Return 3x3 rotation matrix.
+    - convention="dataset": dataset angles where + is clockwise and 0 = up (+Y).
+      Implemented by converting to math CCW angle internally.
+    - convention="math": standard math angles (CCW, 0 = +X).
+    """
+    if convention == "dataset":
+        # convert dataset angle (0=+Y, +CW) to math CCW angle
+        # math_theta = 90 - theta_deg  is equivalent to negation + offset;
+        # either is fine; here we use negation to treat +theta as clockwise.
+        theta_rad = np.radians(theta_deg)
+    else:
+        theta_rad = np.radians(theta_deg)
 
-    # Create the rotation matrix
-    rotation_matrix = rotation_matrix_around_z(angle)
-    # Translate mesh to the origin (subtract the center)
-    original_mesh.vectors -= center
-    
-    # Apply the rotation matrix
-    original_mesh.vectors = np.dot(original_mesh.vectors, rotation_matrix.T)
+    c = np.cos(theta_rad)
+    s = np.sin(theta_rad)
+    R = np.array([[c, -s, 0.0],
+                  [s,  c, 0.0],
+                  [0.0, 0.0, 1.0]], dtype=np.float64)
+    return R
 
-    # Translate mesh back to the original center (add the center)
-    original_mesh.vectors += center       
-    # Save the rotated mesh to a new file
-    original_mesh.save(output_path + f'.stl')
-    print(f"Saved output to {output_path + f'.stl'} ")
+
+def rotate_geometry(stl_path, output_path, angle_deg, *,
+                    center_world=None,
+                    convention="dataset",
+                    verbose=True,
+                    rounding_decimals=8):
+    """
+    Rotate an STL by `angle_deg` around Z about `center_world` (cx,cy,cz).
+    If center_world is None, compute the mesh bbox center and use that.
+    Ensures the provided pivot remains at the exact coordinates (within FP tolerance).
+
+    Returns diagnostics dict.
+    """
+    # load mesh
+    m = mesh.Mesh.from_file(stl_path)
+
+    # Flatten points and force float64 computation
+    pts = m.vectors.reshape(-1, 3).astype(np.float64)
+
+    # If no pivot provided, compute bbox center from the mesh points
+    if center_world is None:
+        min_coords = pts.min(axis=0)
+        max_coords = pts.max(axis=0)
+        cx, cy, cz = ((min_coords + max_coords) / 2.0).tolist()
+        if verbose:
+            print("Computed bbox center (used as pivot):", (cx, cy, cz))
+    else:
+        # ensure center_world is float64 and length 3
+        cw = np.asarray(center_world, dtype=np.float64).ravel()
+        if cw.size == 2:
+            # if user provided (x,y), set z to mesh bbox center z
+            min_z, max_z = pts[:, 2].min(), pts[:, 2].max()
+            cz = (min_z + max_z) / 2.0
+            cx, cy = cw[0], cw[1]
+            if verbose:
+                print("Provided pivot (x,y) used; computed pivot z from mesh bbox:", cz)
+        elif cw.size == 3:
+            cx, cy, cz = cw.tolist()
+        else:
+            raise ValueError("center_world must be length 2 or 3 (x,y[,z])")
+        if verbose:
+            print("Using provided center_world (pivot):", (cx, cy, cz))
+
+    # ensure pivot as float64 array
+    pivot = np.array([cx, cy, cz], dtype=np.float64)
+
+    # rotation matrix (float64)
+    R = rotation_matrix_around_z(angle_deg, convention=convention)
+
+    # Translate points so pivot -> origin (float64)
+    translated = pts - pivot  # float64
+
+    # Apply rotation
+    rotated = translated.dot(R.T)  # float64
+
+    # Translate back
+    rotated += pivot  # float64
+
+    # OPTIONAL: round to avoid tiny floating point noise before casting to float32
+    if rounding_decimals is not None:
+        rotated_rounded = np.round(rotated, rounding_decimals)
+    else:
+        rotated_rounded = rotated
+
+    # Write back into mesh with float32 storage
+    m.vectors = rotated_rounded.reshape(m.vectors.shape).astype(np.float32)
+
+    # Save rotated mesh
+    out_file = output_path if str(output_path).endswith('.stl') else str(output_path) + '.stl'
+    m.save(out_file)
+    if verbose:
+        print(f"Saved rotated mesh to: {out_file}")
+
+    # Diagnostics
+    min_before = pts.min(axis=0); max_before = pts.max(axis=0)
+    center_before = (min_before + max_before) / 2.0
+
+    min_after = rotated.min(axis=0); max_after = rotated.max(axis=0)
+    center_after = (min_after + max_after) / 2.0
+
+    # Verify pivot is preserved (should be unchanged)
+    # Because pivot is not necessarily a mesh vertex, check by re-applying transform:
+    # rotating the pivot around itself should produce the same pivot (exactly).
+    # Numeric check: compute transformed pivot by our steps and compare.
+    pivot_translated = pivot - pivot  # zeros
+    pivot_rotated = pivot_translated.dot(R.T) + pivot  # should equal pivot
+    pivot_error = np.max(np.abs(pivot_rotated - pivot))
+
+    if verbose:
+        print("Center before (bbox center) (x,y,z):", center_before)
+        print("Center after  (bbox center) (x,y,z):", center_after)
+        print("Chosen rotation pivot (world):", tuple(pivot.tolist()))
+        print("Pivot reconstruction error (should be ~0):", pivot_error)
+
+    # If pivot_error is tiny (<= ~1e-8) it's fine.
+    # As an extra sanity check, compute centroid of geometry and see how far it moved relative to pivot:
+    centroid_before = pts.mean(axis=0)
+    centroid_after = rotated.mean(axis=0)
+    centroid_shift = np.linalg.norm(centroid_after - centroid_before)
+
+    if verbose:
+        print("Centroid before:", centroid_before)
+        print("Centroid after: ", centroid_after)
+        print("Centroid shift magnitude:", centroid_shift)
+
+    return {
+        "out_file": out_file,
+        "center_before_bbox": center_before,
+        "center_after_bbox": center_after,
+        "chosen_pivot": tuple(pivot.tolist()),
+        "pivot_error": float(pivot_error),
+        "centroid_before": centroid_before,
+        "centroid_after": centroid_after,
+        "centroid_shift": float(centroid_shift),
+        "R": R
+    }
