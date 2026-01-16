@@ -12,32 +12,34 @@ import string
 import matplotlib.pyplot as plt
 import os, h5py,glob
 # from Models import UNet_wind
-from Models import Generator2D 
-# from Models import ResidualBlock2D,Discriminator2D
+from Models import Generator2D
+from Models  import ResidualBlock2D,Discriminator
 import sys
 sys.path.append('../../pre-process/')
-import STL2GeoTool_loop
+import STL2GeoTool
 
 
 BASE_FOLDER='./'
 
 
-DATASET_BASE_PATH='../../pre-process/output/'
-OUTPUT_PATH = '../output/'
-DATA_SAMPLE_BASENAME='campusnord_1280'
+DATASET_BASE_PATH='../../pre-process/output'
+OUTPUT_PATH = '../output/cedval_2048_ddp/'
+DATA_SAMPLE_BASENAME='cedval_2048'
 MODEL_BASENAME='generator'
-MODEL_LOADING_PATH='./'
-INPUT_FEAT=['MASK','HEGT'] #having a MASK distinguishing solid and fluid regions at the first position is mandatory.
+# MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/serial_batch1/'
+MODEL_LOADING_PATH= '/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/batch1_ddp_loaded/'
+INPUT_FEAT=['MASK','HEGT','WDST'] #having a MASK distinguishing solid and fluid regions at the first position is mandatory.
 TARGET_FEAT=['U','V']
 EXTRA_FEAT=[]
-INPUT_XDIM=1280
-INPUT_YDIM=1280
+INPUT_XDIM=2048
+INPUT_YDIM=2048
 TARGET_XDIM=256
 TARGET_YDIM=256
 SPACING_X=1.0
 SPACING_Y=1.0
 SCALING_X=120. #whole dataset input max value
 SCALING_Y=16.0 #whole dataset output max value
+VERBOSE=2
 
 
 def plot_field(field, image_name, mask=None, vmin_cost=0.0, vmax_cost=0.0):
@@ -178,6 +180,8 @@ def get_args():
     parser.add_argument('-scaling_x', type=float, default=SCALING_X ,help='whole dataset input max value to normalize input data into a [-1,1] range')
     parser.add_argument('-scaling_y', type=float, default=SCALING_Y ,help='whole dataset target max value to normalize output data into a [-1,1] range')
     parser.add_argument('-num_res_blocks', type=int, default=32, help='number of residual blocks in the generator model')
+    parser.add_argument('-verbose', type=int, default=VERBOSE, help='verbose level (0,1,2). 0: none. 1: text. 2: text and plots')
+
     args, _ = parser.parse_known_args()
     return args
 
@@ -189,7 +193,7 @@ if __name__ == '__main__':
     if device not in ['cpu','cuda:0']: device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f'used device={device}')   
 
-    for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
+    for wind_angle in [STL2GeoTool.WIND_DIRECTION]:
         args.data_sample_basename = DATA_SAMPLE_BASENAME
         dataset_folder = f"{args.dataset_base_path}/output{wind_angle}-{DATA_SAMPLE_BASENAME}/"
         output_folder = f"{args.output_path}/output{wind_angle}-{DATA_SAMPLE_BASENAME}/" 
@@ -199,8 +203,9 @@ if __name__ == '__main__':
 
         # Model initialization
         # model = UNet_wind(args)
-        model=Generator2D(args) 
-        # model = Discriminator2D(args)
+        # model=UNet_wind(args) 
+        model = Generator2D(args)
+        # model = Discriminator(args)
         model = load_model(model, args).to(device)
 
         h5_files = [f for f in os.listdir(dataset_folder) if f.endswith('.h5')]
@@ -225,21 +230,7 @@ if __name__ == '__main__':
 
             with torch.no_grad():
                 ypred=model(x.float())
-
-            # plot_field(y[0][0],f'{SAVING_FOLDER}/refU-{GEO}-{ANGLE}-{SAMPLE_ID}.png',x[0][0],vmin_cost=0.3,vmax_cost=0.8)
-            # plot_field(y[0][1],f'{SAVING_FOLDER}/refV-{GEO}-{ANGLE}-{SAMPLE_ID}.png',x[0][0],vmin_cost=0.3,vmax_cost=0.7)
-            # plot_field(ypred[0][0],f'{SAVING_FOLDER}/predU-{GEO}-{ANGLE}-{SAMPLE_ID}.png',x[0][0],vmin_cost=0.3,vmax_cost=0.8)
-            # plot_field(ypred[0][1],f'{SAVING_FOLDER}/predV-{GEO}-{ANGLE}-{SAMPLE_ID}.png',x[0][0],vmin_cost=0.3,vmax_cost=0.7)
             print(f"Saving prediction and ground truth for {file}")
-            # np.savetxt(os.path.join(output_folder, f"{name_prefix}-UGT.csv"), ypred[0][0].cpu().numpy(), delimiter=',')
-            # np.savetxt(os.path.join(output_folder, f"{name_prefix}-VGT.csv"), ypred[0][1].cpu().numpy(), delimiter=',')
-            # plot_field(ypred[0][0], os.path.join(output_folder, f"{name_prefix}-UGT"), x[0][0], vmin_cost=0.3, vmax_cost=0.8)
-            # plot_field(ypred[0][1], os.path.join(output_folder, f"{name_prefix}-VGT"), x[0][0], vmin_cost=0.3, vmax_cost=0.7)
-
-            # U_mag = np.sqrt(ypred[0][0].cpu()**2 + ypred[0][1].cpu()**2)
-            # np.savetxt(os.path.join(output_folder, f"{name_prefix}-UMAG.csv"), U_mag, delimiter=',')
-            # plot_field(U_mag, os.path.join(output_folder, f"{name_prefix}-UMAG"),x[0][0],vmin_cost=0.3,vmax_cost=0.8)
-            # Create the mask where x[0][0] < 1.0
             mask = (x[0][0] >= 1.0).cpu().numpy()  # shape: (256, 256) or similar
 
             # Apply the mask to each output channel (Ux and Uy)

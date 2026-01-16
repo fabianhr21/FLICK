@@ -25,10 +25,7 @@ import math
 
 # Add polyprep to path - ensure this folder exists relative to script execution
 sys.path.append('./polyprep')
-try:
-    from polyprep import process_polygons
-except ImportError:
-    print("Warning: 'polyprep' module not found. Polygon processing step might fail.")
+from polyprep import process_polygons
 
 # Define default CRS
 DEFAULT_CRS = 'EPSG:4326' 
@@ -401,7 +398,7 @@ def main():
     # Apply polyprep
     print("Applying polyprep to osm_buildings...")
     try:
-        process_polygons(buildings_geojson, polyprep_geojson, buffer_size=2.0, apply_convex_hull=False, remove_holes=2, simplification_tol=0.5)
+        process_polygons(buildings_geojson, polyprep_geojson, buffer_size=2.0, apply_convex_hull=False, remove_holes=1, simplification_tol=0.5)
         print(f"Polyprep saved to {polyprep_geojson}")
     except Exception as e:
         print(f"Polyprep failed ({e}). Using raw OSM file for config.")

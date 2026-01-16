@@ -99,6 +99,71 @@ class Generator2D(nn.Module):
 ###########################################
 ##          DISCRIMINATOR 2D             ##
 ###########################################
+
+class Discriminator(nn.Module):
+    """Defines a PatchGAN discriminator"""
+
+    def __init__(self, args):
+
+        super(Discriminator, self).__init__()
+
+        self.args = args
+        self._input_feature_keys=args.x_features
+        self._target_feature_keys=args.y_features
+        self._num_input_features=len(args.x_features)
+        self._num_target_features=len(args.y_features)
+        self._input_feature_xdim=args.input_xdim
+        self._input_feature_ydim=args.input_ydim
+        self._target_feature_xdim=args.target_xdim
+        self._target_feature_ydim=args.target_ydim
+
+        self.conv2D_input_64=nn.Conv2d(in_channels=(self._num_target_features+self._num_input_features),out_channels=64, kernel_size=4, stride=2, padding=1,bias=False)
+        self.conv2D_64_128=nn.Conv2d(in_channels=64,out_channels=128, kernel_size=4, stride=2, padding=1,bias=False)
+        self.conv2D_128_256=nn.Conv2d(in_channels=128,out_channels=256, kernel_size=4, stride=2, padding=1,bias=False)
+        self.conv2D_256_512=nn.Conv2d(in_channels=256,out_channels=512, kernel_size=4, stride=1, padding=1,bias=False)
+        self.conv2D_512_output=nn.Conv2d(in_channels=512,out_channels=1, kernel_size=4, stride=1, padding=1,bias=False)
+
+        print("COMPROBAR QUE LES DIMENSIONS DELS TENSORS QUADREN AMB EL JUPYTER NOTEBOOK!")
+
+        self.BatchNorm_128=torch.nn.BatchNorm2d(128, eps=1e-03, momentum=0.99, affine=True, track_running_stats=True, device=None, dtype=None)
+        self.BatchNorm_256=torch.nn.BatchNorm2d(256, eps=1e-03, momentum=0.99, affine=True, track_running_stats=True, device=None, dtype=None)
+        self.BatchNorm_512=torch.nn.BatchNorm2d(512, eps=1e-03, momentum=0.99, affine=True, track_running_stats=True, device=None, dtype=None)
+
+        self.LeakyReLU=nn.LeakyReLU(0.2,True)
+
+        self.reset_parameters(self.modules()) #self.modules returns an interable to the idfferent layers in the model class.
+
+
+    def reset_parameters(self, m) -> None:
+        
+        #print("INITIALIZING WEIGHTS")
+        #el pix2pix fa servir el random normal initialization:
+        #initializer = tf.random_normal_initializer(0., 0.02)
+
+        for layer in m:
+            if isinstance(layer, nn.Conv2d):
+                nn.init.normal_(layer.weight,mean=0.0,std=0.02)
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.constant_(m.weight,mean=1.0,std=0.02)
+
+    def forward(self,x):
+
+        x=self.conv2D_input_64(x)
+        x=self.LeakyReLU(x)
+        x=self.conv2D_64_128(x)
+        x=self.BatchNorm_128(x)
+        x=self.LeakyReLU(x)
+        x=self.conv2D_128_256(x)
+        x=self.BatchNorm_256(x)
+        x=self.LeakyReLU(x)            
+        x=self.conv2D_256_512(x)
+        x=self.BatchNorm_512(x)
+        x=self.LeakyReLU(x)
+        x=self.conv2D_512_output(x)
+
+        return x
+
+'''
 class Discriminator2D(nn.Module):   # (Aquesta part també variará una mica respecte al 3D)
     def __init__(self, args):
 
@@ -135,3 +200,4 @@ class Discriminator2D(nn.Module):   # (Aquesta part també variará una mica res
         out = out.view(out.size(0), -1) # Output: [B, 65536]
         out = self.fc(out)              # Output: [B, 1]
         return torch.sigmoid(out)    
+'''

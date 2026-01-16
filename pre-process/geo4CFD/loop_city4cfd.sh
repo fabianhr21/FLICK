@@ -1,9 +1,9 @@
 #!/bin/bash
 ## COde to loop over a desrierd directory and apply clipnbuildings
 
-DIR="/home/fabianh/GEO_CASES/"
-CITIES=("BARCELONA")
-CITY4CFD="/home/fabianh/City4CFDlocal/new_build/"
+DIR="/home/fabianh/ANSA/CASES_MESHES/"
+CITIES=("BARCELONA"  "MADRID"  "SEVILLA"  "VALENCIA"  "ZARAGOZA")
+CITY4CFD="/home/fabianh/City4CFD/build/"
 RADIUS=1000
 
 
@@ -16,3 +16,5 @@ for city in "${CITIES[@]}"; do
         $CITY4CFD/city4cfd $f/output/config.json  --output_dir $f/output/
     done   
 done 
+
+# /home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/config.json
