@@ -13,7 +13,7 @@ You can obtain BIM models from all of Catalunya at <https://geoportalcartografia
 The City4CFD project can also be used to generate CFD domains. The workflow provided here focuses on preparing geometry for simulation with the SOD2D solver.
 The next picture shows a diagram of the workflow for preparing any LiDAR dataset into a CFD-ready mesh.
 
-<img width="1024" height="535" alt="image" src="https://github.com/user-attachments/assets/e1601656-6946-460c-92fb-fd5197d120cb" />
+<img width="1730" height="223" alt="image" src="https://github.com/user-attachments/assets/afcbd7ca-1ed1-4127-936d-507c983230f4" />
 
 ## Wind-NN
 The `wind-nn` folder hosts the surrogate neural network used to predict wind behaviour. The model outputs normalized velocity components.
