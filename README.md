@@ -25,9 +25,8 @@ Scripts in `post-process` scale the predicted wind velocity and generate visuali
 
 ## Environment prerequisites
 - **Python** 3.8 or newer with the packages listed in `requirements.txt`.
-- **pyAlya** library (contact Arnau Miró at <arnau.mirojane@bsc.es> for access).
-- A CUDA-capable GPU is recommended for running the neural network.
-- Optional: an MPI environment for running the pre-processing scripts in parallel.
+- **pyQvarsi can be compiled from https://gitlab.com/ArnauMiro/pyqvarsi.git
+- **CUDA** environment
 
 ## Compiling City4CFD and pyQvarsi
 All external tools can be built by running `compile_tools.sh` from the repository root:
