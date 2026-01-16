@@ -1,4 +1,4 @@
-# FMUC
+# FLICK
 
 FMUC - Fast Modeling Urban Climate is a package developed in collaboration with the Barcelona Supercomputing Center and the Universitat Politècnica de Catalunya to model wind at urban scales using Neural Networks.
 
