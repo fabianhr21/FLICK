@@ -15,16 +15,16 @@ import os, h5py,glob
 from Models import Generator2D
 from Models  import ResidualBlock2D,Discriminator
 import sys
-sys.path.append('../../pre-process/')
+sys.path.append('../pre-process/')
 import STL2GeoTool
 
 
 BASE_FOLDER='./'
 
 
-DATASET_BASE_PATH='../../pre-process/output'
-OUTPUT_PATH = '../output/grid_of_cubes/'
-DATA_SAMPLE_BASENAME='grid_of_cubes'
+DATASET_BASE_PATH='../pre-process/output'
+OUTPUT_PATH = './output/sanjeronimo/'
+DATA_SAMPLE_BASENAME='sanjeronimo'
 MODEL_BASENAME='generator'
 # MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/serial_batch1/'
 MODEL_LOADING_PATH= './'
@@ -188,13 +188,15 @@ def get_args():
 if __name__ == '__main__':
 
     args = get_args() 
+    DATA_SAMPLE_BASENAME=args.data_sample_basename
+    
 
     device='null'
     if device not in ['cpu','cuda:0']: device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f'used device={device}')   
 
     for wind_angle in [STL2GeoTool.WIND_DIRECTION]:
-        args.data_sample_basename = DATA_SAMPLE_BASENAME
+        # args.data_sample_basename = DATA_SAMPLE_BASENAME
         dataset_folder = f"{args.dataset_base_path}/output{wind_angle}-{DATA_SAMPLE_BASENAME}/"
         output_folder = f"{args.output_path}/output{wind_angle}-{DATA_SAMPLE_BASENAME}/" 
 

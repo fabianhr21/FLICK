@@ -256,7 +256,7 @@ if __name__ == "__main__":
                         grid_dims_Nx=N_POINTS,
                         grid_dims_Ny=N_POINTS,
                         dist_resolution=DIST_RESOLUTION,
-                        z_tol=1e-2
+                        z_tol=1e-4
                     )
                 t3 = perf_counter()
                 if mpi_rank == 0:

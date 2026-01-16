@@ -15,9 +15,12 @@ fi
 
 BASENAME=$1
 real_path=$(realpath "$BASENAME")
+STEP_SIZE=128
+input_xydim=$((STEP_SIZE * 4))
+echo "Input xdim and ydim: $input_xydim"
 
 # Run the Python script with srun
 cd pre-process/
-python ./STL2GeoTool.py -stl_basename "${BASENAME}" -step_size 64 -stl_dir "../"
-cd ../wind-nn/170625_weights/
-mpirun -n 1 python new-inference-script.py -data_sample_basename "$BASENAME"
+python ./STL2GeoTool.py -stl_basename "${BASENAME}" -step_size $STEP_SIZE -stl_dir "../"
+cd ../wind-nn/
+mpirun -n 1 python new-inference-script.py -data_sample_basename "$BASENAME" -input_xdim $input_xydim -input_ydim $input_xydim 
