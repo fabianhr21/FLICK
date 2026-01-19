@@ -29,8 +29,8 @@ def extract_and_trace_perimeters(vertical_triangles, z_tol):
       A list of [ (N, 3) np.array ], where each array is an ordered
       list of vertices (X,Y,Z) forming a closed perimeter loop.
     """
-    if mpi_rank == 0:
-        print(f"[Graph] Building perimeter graph from {len(vertical_triangles)} vertical triangles...")
+    # if mpi_rank == 0:
+    #     print(f"[Graph] Building perimeter graph from {len(vertical_triangles)} vertical triangles...")
         
     adj = defaultdict(list)
     vertex_map = {} # Map from hashable 2D tuple -> original 3D vertex
@@ -72,8 +72,8 @@ def extract_and_trace_perimeters(vertical_triangles, z_tol):
             while current is not None:
                 visited.add(current)
                 if current not in vertex_map:
-                    if mpi_rank == 0:
-                        print(f"Warning: Node {current} in graph but not in vertex_map. Skipping path.")
+                    # if mpi_rank == 0:
+                        # print(f"Warning: Node {current} in graph but not in vertex_map. Skipping path.")
                     path = [] # Invalidate path
                     break
                     
@@ -91,8 +91,8 @@ def extract_and_trace_perimeters(vertical_triangles, z_tol):
                     path.append(vertex_map[start_node]) 
                     break
                 elif next_node in visited:
-                    if mpi_rank == 0:
-                        print(f"Warning: Path hit visited node {next_node} before closing. Stopping trace.")
+                    # if mpi_rank == 0:
+                    #     print(f"Warning: Path hit visited node {next_node} before closing. Stopping trace.")
                     break
                 
                 prev = current
@@ -101,8 +101,8 @@ def extract_and_trace_perimeters(vertical_triangles, z_tol):
             if len(path) > 2:
                 all_perimeters.append(np.array(path, dtype=np.float64))
 
-    if mpi_rank == 0:
-        print(f"[Graph] Tracing complete. Found {len(all_perimeters)} perimeter components.")
+    # if mpi_rank == 0:
+    #     print(f"[Graph] Tracing complete. Found {len(all_perimeters)} perimeter components.")
     return all_perimeters
 # --- END: Robust Perimeter Tracing ---
 

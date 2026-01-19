@@ -109,7 +109,7 @@ if __name__ == "__main__":
         rotated_stl_basename = STL_BASENAME  # To avoid changing the original base name
 
         if mpi_rank == 0:
-            print(f"N_POINTS: {N_POINTS}, STEP_SIZE: {STEP_SIZE}, WIND_DIRECTION: {wind_angle}")
+            # print(f"N_POINTS: {N_POINTS}, STEP_SIZE: {STEP_SIZE}, WIND_DIRECTION: {wind_angle}")
             # asegurarse de que STL_DIR esté definido y que el archivo origen exista
             src = os.path.join(POST_DIR, STL_BASENAME + '.stl')
             # if not os.path.exists(src):
@@ -134,7 +134,7 @@ if __name__ == "__main__":
             )
             rotated_stl_basename = STL_BASENAME
             rotated_stl_basename_geo = STL_GEOREF
-            pyQvarsi.pprint(0,f'Rotated geometry to align with wind direction: {wind_angle} in file {rotated_stl_basename_geo}.stl',flush=True)
+            # pyQvarsi.pprint(0,f'Rotated geometry to align with wind direction: {wind_angle} in file {rotated_stl_basename_geo}.stl',flush=True)
     
             args = get_args()
             # Save rotated geometry coordinates
@@ -151,8 +151,8 @@ if __name__ == "__main__":
             center_x = GCP["Center_X"]
             center_y = GCP["Center_Y"]
 
-            print(f"Bounding box: min_x={min_x}, min_y={min_y}, max_x={max_x}, max_y={max_y}")
-            print(f"Center coordinates: Center_X={center_x}, Center_Y={center_y}")
+            # print(f"Bounding box: min_x={min_x}, min_y={min_y}, max_x={max_x}, max_y={max_y}")
+            # print(f"Center coordinates: Center_X={center_x}, Center_Y={center_y}")
 
                      
             move_stl_to_origin(POST_DIR + rotated_stl_basename + '.stl', POST_DIR + rotated_stl_basename + '.stl')
@@ -170,14 +170,14 @@ if __name__ == "__main__":
                 j_global = x_length // 2
                 i_global = y_length // 2
                 STL_DISPLACEMENT = [j_global, i_global, 0]
-                pyQvarsi.pprint(0, f"Centering domain at: {STL_DISPLACEMENT}", flush=True)
+                # pyQvarsi.pprint(0, f"Centering domain at: {STL_DISPLACEMENT}", flush=True)
 
                 # New domain extent
                 min_x = center_x - STEP_SIZE
                 min_y = center_y - STEP_SIZE
                 max_x = center_x + STEP_SIZE
                 max_y = center_y + STEP_SIZE
-                print(f"New domain extent: min_x={min_x}, min_y={min_y}, max_x={max_x}, max_y={max_y}")
+                # print(f"New domain extent: min_x={min_x}, min_y={min_y}, max_x={max_x}, max_y={max_y}")
                 # Update GCP with new coordinates
                 GCP['new_min_x'] = min_x
                 GCP['new_min_y'] = min_y
@@ -187,7 +187,7 @@ if __name__ == "__main__":
             else:
                 # Use the original displacement
                 STL_DISPLACEMENT = [j_global, i_global, 0]
-                print(f"Using original displacement: {STL_DISPLACEMENT}")
+                # print(f"Using original displacement: {STL_DISPLACEMENT}")
             
             # Save GCP to a file
             with open(POST_DIR + 'GCP.csv', 'w', newline='') as csv_file:
@@ -204,12 +204,12 @@ if __name__ == "__main__":
             y_length = mpi_comm.bcast(y_length if mpi_rank == 0 else None, root=0)
 
 
-        pyQvarsi.pprint(0, f'Domain size in x: {x_length} and y: {y_length}', flush=True)
+        # pyQvarsi.pprint(0, f'Domain size in x: {x_length} and y: {y_length}', flush=True)
         n = 0
         x_frames = 0
         y_frames = 0
         for i in range(0, 1):#-y_length, -overlap):
-            pyQvarsi.pprint(0, f"[Rank {mpi_rank}] Starting processing at wind angle {wind_angle}", flush=True)
+            # pyQvarsi.pprint(0, f"[Rank {mpi_rank}] Starting processing at wind angle {wind_angle}", flush=True)
 
             y_frames += 1
             for j in range(0, 1):#-x_length, -overlap):

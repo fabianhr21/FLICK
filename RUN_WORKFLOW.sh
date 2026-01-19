@@ -21,6 +21,6 @@ echo "Input xdim and ydim: $input_xydim"
 
 # Run the Python script with srun
 cd pre-process/
-python ./STL2GeoTool.py -stl_basename "${BASENAME}" -step_size $STEP_SIZE -stl_dir "../"
+python ./STL2GeoTool.py -stl_basename "${BASENAME}" -step_size $STEP_SIZE -stl_dir "../" 
 cd ../wind-nn/
 mpirun -n 1 python new-inference-script.py -data_sample_basename "$BASENAME" -input_xdim $input_xydim -input_ydim $input_xydim 

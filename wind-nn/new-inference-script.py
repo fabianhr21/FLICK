@@ -23,7 +23,7 @@ BASE_FOLDER='./'
 
 
 DATASET_BASE_PATH='../pre-process/output'
-OUTPUT_PATH = './output/sanjeronimo/'
+OUTPUT_PATH = './output/'
 DATA_SAMPLE_BASENAME='sanjeronimo'
 MODEL_BASENAME='generator'
 # MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/serial_batch1/'
@@ -189,6 +189,10 @@ if __name__ == '__main__':
 
     args = get_args() 
     DATA_SAMPLE_BASENAME=args.data_sample_basename
+    OUTPUT_PATH=args.output_path
+    args.input_xdim=args.input_xdim*4
+    args.input_ydim=args.input_ydim*4
+    
     
 
     device='null'

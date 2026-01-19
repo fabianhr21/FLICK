@@ -313,7 +313,7 @@ def move_stl_to_origin(stl_file, output_file):
 
     # Save the translated mesh to a new file
     original_mesh.save(output_file)
-    print(f'Saved translated STL file to: {output_file}')
+    # print(f'Saved translated STL file to: {output_file}')
 
 def move_stl_to_origin_trimesh(input_file, output_file):
     # Load the STL mesh
@@ -329,7 +329,7 @@ def move_stl_to_origin_trimesh(input_file, output_file):
 
     # Export the mesh to a new file
     mesh.export(output_file)
-    print(f"Saved translated STL file to: {output_file}")
+    # print(f"Saved translated STL file to: {output_file}")
 
 def compute_bounding_box_center(stl_mesh):
     """
@@ -396,14 +396,14 @@ def rotate_geometry(stl_path, output_path, angle_deg, *,
             min_z, max_z = pts[:, 2].min(), pts[:, 2].max()
             cz = (min_z + max_z) / 2.0
             cx, cy = cw[0], cw[1]
-            if verbose:
-                print("Provided pivot (x,y) used; computed pivot z from mesh bbox:", cz)
+            # if verbose:
+            #     print("Provided pivot (x,y) used; computed pivot z from mesh bbox:", cz)
         elif cw.size == 3:
             cx, cy, cz = cw.tolist()
         else:
             raise ValueError("center_world must be length 2 or 3 (x,y[,z])")
-        if verbose:
-            print("Using provided center_world (pivot):", (cx, cy, cz))
+        # if verbose:
+        #     print("Using provided center_world (pivot):", (cx, cy, cz))
 
     # ensure pivot as float64 array
     pivot = np.array([cx, cy, cz], dtype=np.float64)
@@ -432,8 +432,8 @@ def rotate_geometry(stl_path, output_path, angle_deg, *,
     # Save rotated mesh
     out_file = output_path if str(output_path).endswith('.stl') else str(output_path) + '.stl'
     m.save(out_file)
-    if verbose:
-        print(f"Saved rotated mesh to: {out_file}")
+    # if verbose:
+    #     print(f"Saved rotated mesh to: {out_file}")
 
     # Diagnostics
     min_before = pts.min(axis=0); max_before = pts.max(axis=0)
@@ -450,11 +450,11 @@ def rotate_geometry(stl_path, output_path, angle_deg, *,
     pivot_rotated = pivot_translated.dot(R.T) + pivot  # should equal pivot
     pivot_error = np.max(np.abs(pivot_rotated - pivot))
 
-    if verbose:
-        print("Center before (bbox center) (x,y,z):", center_before)
-        print("Center after  (bbox center) (x,y,z):", center_after)
-        print("Chosen rotation pivot (world):", tuple(pivot.tolist()))
-        print("Pivot reconstruction error (should be ~0):", pivot_error)
+    # if verbose:
+    #     print("Center before (bbox center) (x,y,z):", center_before)
+    #     print("Center after  (bbox center) (x,y,z):", center_after)
+    #     print("Chosen rotation pivot (world):", tuple(pivot.tolist()))
+    #     print("Pivot reconstruction error (should be ~0):", pivot_error)
 
     # If pivot_error is tiny (<= ~1e-8) it's fine.
     # As an extra sanity check, compute centroid of geometry and see how far it moved relative to pivot:
@@ -462,10 +462,6 @@ def rotate_geometry(stl_path, output_path, angle_deg, *,
     centroid_after = rotated.mean(axis=0)
     centroid_shift = np.linalg.norm(centroid_after - centroid_before)
 
-    if verbose:
-        print("Centroid before:", centroid_before)
-        print("Centroid after: ", centroid_after)
-        print("Centroid shift magnitude:", centroid_shift)
 
     return {
         "out_file": out_file,
