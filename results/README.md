@@ -21,12 +21,12 @@ Building a General and Data-Efficient Convolutional Neural Network-Based Model f
 Available at SSRN: https://ssrn.com/abstract=5970896 or http://dx.doi.org/10.2139/ssrn.5970896
 
 
-[2] Gasparino, L., Spiga, F., & Lehmkuhl, O. (2024). SOD2D: A GPU-enabled spectral finite elements method for compressible scale-resolving simulations. 
-Computer Physics Communications, 297, 109067.
+[2] Gasparino, L., Spiga, F., & Lehmkuhl, O. (2024). SOD2D: A GPU-enabled spectral finite elements method for compressible scale-resolving simulations. Computer Physics Communications, 297, 109067. https://www.sciencedirect.com/science/article/pii/S0010465523004125
 
-[3] Teng, M., Duró Diaz, J. M., Mestres, E., Muela Castro, J., Lehmkuhl, O., & Rodriguez, I. (2025). Atmospheric boundary layer over urban roughness: Validation of large-eddy simulation. Physics of Fluids, 37(6).
+[3] Teng, M., Duró Diaz, J. M., Mestres, E., Muela Castro, J., Lehmkuhl, O., & Rodriguez, I. (2025). Atmospheric boundary layer over urban roughness: Validation of large-eddy simulation. Physics of Fluids, 37(6). https://pubs.aip.org/aip/pof/article/37/6/065129/3349087
 
-[4] Teng, M., Duro, J. M., Munoz, N., Mestres, E., Muela, J., Lehmkuhl, O., & Rodriguez, I. (2025). Toward high-fidelity simulations of urban flows: mean-flow statistics. In ICHMT DIGITAL LIBRARY ONLINE. Begel House Inc..
+[4] Teng, M., Duro, J. M., Munoz, N., Mestres, E., Muela, J., Lehmkuhl, O., & Rodriguez, I. (2025). Toward high-fidelity simulations of urban flows: mean-flow statistics. In ICHMT DIGITAL LIBRARY ONLINE. Begel House Inc. https://www.dl.begellhouse.com/references/1bb331655c289a0a,7224fbfa56c3c688,526111d85f38377b.html
 
-[5] Rodríguez, I., Duró, J. M., Mestres, E., Teng, M., & Lehmkuhl, O. (2025). Impact of Wind Direction on Flow Over a Realistic Urban Area: A Large-Eddy Simulation Study. arXiv preprint arXiv:2510.11247.
+[5] Rodríguez, I., Duró, J. M., Mestres, E., Teng, M., & Lehmkuhl, O. (2025). Impact of Wind Direction on Flow Over a Realistic Urban Area: A Large-Eddy Simulation Study. arXiv preprint arXiv:2510.11247. https://arxiv.org/abs/2510.11247
+ 
 
