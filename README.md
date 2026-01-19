@@ -18,14 +18,14 @@ The next picture shows a diagram of the workflow for preparing any LiDAR dataset
 ## Wind-NN
 The `wind-nn` folder hosts the surrogate neural network used to predict wind behaviour. The model outputs normalized velocity components.
 
-The Wind-NN should be run within the directory 170625_weights, with the weights that must be asked for since they have some weight and should be sent separately.
+The Neural Network Weights should be asked to fabian.hernandez@bsc.es
 
 ## Post-Process
 Scripts in `post-process` scale the predicted wind velocity and generate visualisations.
 
 ## Environment prerequisites
 - **Python** 3.8 or newer with the packages listed in `requirements.txt`.
-- **pyQvarsi can be compiled from https://gitlab.com/ArnauMiro/pyqvarsi.git
+- **pyQvarsi** can be compiled from https://gitlab.com/ArnauMiro/pyqvarsi.git
 - **CUDA** environment
 
 ## Compiling City4CFD and pyQvarsi
@@ -60,4 +60,5 @@ Adjust the SBATCH parameters in the script to match your system configuration.
 - **City4CFD** – source code of the City4CFD geometry generator.
 - **pyqvarsi** – post‑processing library used by the workflow.
 
+For ant doubts contact fabian.hernandez@bsc.es
 
