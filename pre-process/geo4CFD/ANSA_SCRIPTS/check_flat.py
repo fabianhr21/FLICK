@@ -13,9 +13,9 @@ import sys
 deck = constants.OPENFOAM
 params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
 working_directory = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
-file_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/"
-input_file = "652-227_Buildings"
-target_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/"
+file_path = "/home/fabianh/GEO_CASES/BARCELONA/295-120/"
+input_file = "295-120_Buildings"
+target_path = "/home/fabianh/GEO_CASES/BARCELONA/295-120/"
 
 
 def generate_geo(geo_script, input_file,y_length):
@@ -33,12 +33,12 @@ def generate_geo(geo_script, input_file,y_length):
 
     print(f"Generated: {geo_script}")
 
-def GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max):
+def GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,avg_height):
 	deck = constants.NASTRAN
 	
 	 ## Create Morph box
-	min_coords = [x_min-h_max,y_min-h_max,z_min]
-	max_coords = [x_max+h_max ,y_max+h_max ,z_min]
+	min_coords = [x_min-avg_height,y_min-avg_height,z_min]
+	max_coords = [x_max+avg_height ,y_max+avg_height ,z_min]
 	morph.MorphMinMax(None, min_coords, max_coords)
 	m1 = base.CollectEntities(deck, None, "MORPHEDGE")
 	
@@ -268,7 +268,6 @@ def _main_core(iso_ent, status, user_val, cog_val):
 			return None
 
 
-
 def main():
 
     # # Take the last part of the path as input file name without extension
@@ -290,7 +289,6 @@ def main():
     fm.recognize(True)
     fe_perimeters = base.CollectEntities(deck, None, "FE PERIMETER")
     fe_perimeter_shells = mesh.GetFEPerimeterShells(fe_perimeters, expand_to_macro=True)
-    
     # Obtain the height of the largest building
     ents = ("SHELL",)  # or "SOLID", "FACE", etc., depending on your model
     #shells = base.PickEntities(deck, ents,recursive=True,filter_visible=True)
@@ -311,15 +309,25 @@ def main():
 
     height = z_max - z_min
     print("Max building height:", height)
-    h_max = height
+    avg_height = height
+
+    # Read avg_height from domain_dimensions.txt
+    domain_file_path = target_path + "domain_dimensions.txt"
+    with open(domain_file_path, "r") as domain_file:
+        lines = domain_file.readlines()
+        for line in lines:
+            if line.startswith("avg_h"):
+                avg_height = float(line.split('=')[1].strip())
+                print("Average building height:", avg_height)
+                break
 
     # Creates domain and assign different PID to faces, core script modified (change in your directory)
     #xp,yp,zp,xn,yn,zn
-    xp =40*h_max
-    yp = 30*h_max
-    zp = 20*h_max
-    xn = 20*h_max
-    yn = 30*h_max
+    xp =40*avg_height
+    yp = 30*avg_height
+    zp = 20*avg_height
+    xn = 20*avg_height
+    yn = 30*avg_height
     zn = z_min
     x_length_domain = x_length + xp + xn
     y_length_domain = y_length + yp + yn
@@ -348,25 +356,25 @@ def main():
     arg2.append([0.0, 1.0, 0.0, ])
     buildings_sb = ansa.base.SizeBoxOrtho(buildings_shells, directions=arg2,  max_length_surface=10,max_length_volume=16)
     ## Campus
-    min_coords = [x_min+(5*h_max),y_min+ (5*h_max),z_min]
-    max_coords = [x_max-(5*h_max),y_max -(5*h_max),z_max]
+    min_coords = [x_min+(5*avg_height),y_min+ (5*avg_height),z_min]
+    max_coords = [x_max-(5*avg_height),y_max -(5*avg_height),z_max]
     campus_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 6, 10)   
     ## ABL
-    min_coords = [x_min - (15*h_max), y_min,z_min]
+    min_coords = [x_min - (18*avg_height), y_min,z_min]
     max_coords = [x_max,y_max,z_max]
     print(min_coords, max_coords)
     abl_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 30, 40)
     ## Close ground
-    min_coords = [x_min-(20*h_max),y_min- (30*h_max),z_min]
-    max_coords = [x_max+(40*h_max),y_max +(30*h_max),z_max+h_max]
+    min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
+    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),z_max+avg_height]
     close_ground_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 85, 85)
     ## Wake 1 (10h)
-    min_coords = [x_max - h_max,y_min,z_min]
-    max_coords = [(x_max - h_max) + (10*h_max),y_max ,z_max]
+    min_coords = [x_max - avg_height,y_min,z_min]
+    max_coords = [(x_max - avg_height) + (10*avg_height),y_max ,z_max]
     wake1_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 40, 60)   
     ## Wake 2 (20h)
-    min_coords = [(x_max - h_max)+ (9*h_max+20),y_min ,z_min]
-    max_coords = [(x_max - h_max) +(29*h_max),y_max,z_max]
+    min_coords = [(x_max - avg_height)+ (9*avg_height+20),y_min ,z_min]
+    max_coords = [(x_max - avg_height) +(29*avg_height),y_max,z_max]
     wake2_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 60, 80)
     
     # Save Size Boxes to a list
@@ -418,7 +426,7 @@ def main():
     groundPrecursor = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "groundPrecursor"})
     
     # Create groundBuildings
-    GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max)
+    #GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,avg_height)
     
     # Simplify faces
     ret = mesh.SimplifyMacros(
@@ -460,8 +468,8 @@ def main():
     base.All()
     # Project abl size box to sides
     ## Close ground
-    min_coords = [x_min-(20*h_max),y_min- (30*h_max),z_min]
-    max_coords = [x_max+(40*h_max),y_max +(30*h_max),48]
+    min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
+    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),48]
     # Create Morph box for project
     morph.MorphMinMax(None, min_coords, max_coords)
     m1 = base.CollectEntities(deck, None, "MORPHEDGE")
@@ -482,13 +490,14 @@ def main():
     arg3['Normal'] = (0.0, 0.0, 0.0, )
     cons = base.ConsProject(entities=morph_perimeters, faces_array=in_out_faces, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
 
-    # Save domain dimensions
-    domain_file = open(target_path+"domain_dimensions.txt", "w")
+    # Save domain dimensions, append if exists
+    domain_file = open(target_path + "domain_dimensions.txt", "w")
+    domain_file.write(f"avg_h = {avg_height}\n")
     domain_file.write(f"x_min: {x_min - xn}\n")
     domain_file.write(f"x_max: {x_max + xp}\n")
     domain_file.write(f"y_min: {y_min - yn}\n")
     domain_file.write(f"y_max: {y_max + yp}\n")
-    domain_file.write(f"z_min: {z_min - 0.5*h_max}\n")
+    domain_file.write(f"z_min: {z_min - 0.5*avg_height}\n")
     domain_file.write(f"z_max: {z_max + zp}\n")
     domain_file.write(f"x_length: {x_length_domain}\n")
     domain_file.write(f"y_length: {y_length_domain}\n")

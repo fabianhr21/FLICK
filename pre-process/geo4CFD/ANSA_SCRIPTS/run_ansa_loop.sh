@@ -2,7 +2,7 @@
 
 input_dir="/home/fabianh/ANSA/CASES_MESHES/"
 working_dir="/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
-cities=("MADRID" "BARCELONA"  "SEVILLA"  "VALENCIA"  "ZARAGOZA")
+cities=("BARCELONA")
 scripts_final="./"
 ansa_path=/apps/ANSA/24.1.2/ansa_v24.1.2/ansa64.sh
 
