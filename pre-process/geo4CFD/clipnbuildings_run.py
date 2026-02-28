@@ -33,7 +33,7 @@ DEFAULT_CRS = 'EPSG:4326'
 # NOTE: Commented out for portability. valid PDAL environment usually handles this.
 # os.environ['PDAL_DRIVER_PATH'] = '/home/fabianh/anaconda3/envs/qgis_env/bin/pdal'
 
-def create_city4cfd_config(output_dir, center_point, radius, ground_laz, building_laz, polygon_geojson, output_name="mesh_mty_topo"):
+def create_city4cfd_config(output_dir, center_point, radius,bounds, ground_laz, building_laz, polygon_geojson, output_name="mesh_mty_topo"):
     """
     Generates the config.json file for CITY4CFD using the paths and coordinates 
     derived from the processing steps.
@@ -46,6 +46,14 @@ def create_city4cfd_config(output_dir, center_point, radius, ground_laz, buildin
     
     # If radius wasn't provided (e.g. BBOX mode), default to 400 or calculate from bounds
     roi_radius = radius if radius else 400
+
+    xmin, ymin, xmax, ymax = bounds
+    poi = [
+        [xmin, ymin],
+        [xmax, ymin],
+        [xmax, ymax],
+        [xmin, ymax]
+    ]
 
     config = {
         "point_clouds": {
@@ -67,7 +75,7 @@ def create_city4cfd_config(output_dir, center_point, radius, ground_laz, buildin
         ],
         "reconstruction_regions": [
             {
-                "influence_region": roi_radius,
+                "influence_region": poi,
                 "lod": "1.2",
                 "complexity_factor": 0.1,
                 "lod13_step_height": 3,
@@ -95,7 +103,7 @@ def create_city4cfd_config(output_dir, center_point, radius, ground_laz, buildin
         },
         "flat_terrain": True,
         "building_percentile": 90,
-        "min_height": 2,
+        "min_height": 3,
         "min_area": 50,
         "reconstruct_failed": False,
         "intersect_buildings_terrain": False,
@@ -137,7 +145,7 @@ def merge_laz_files(input_directory, output_laz):
         os.remove(output_laz)
 
     laz_files = [os.path.join(input_directory, f) for f in os.listdir(input_directory) 
-                 if (f.endswith('.laz') or f.endswith('.las')) and not ('.copc' in f)] 
+                 if (f.endswith('.laz') or f.endswith('.las'))] # and not ('.copc' in f)] 
     
     if not laz_files:
         raise ValueError("No LAZ files found in the input directory.")
@@ -309,6 +317,7 @@ def main():
     parser.add_argument('--bbox', nargs=4, type=float, metavar=('xmin','ymin','xmax','ymax'), help="Bounding box (in target CRS)")
     parser.add_argument('--area_geojson', help="GeoJSON defining polygon area (any CRS)")
     parser.add_argument('--radius', '-r',type=float, help="Radius for circular clipping (map units of target CRS)")
+    parser.add_argument('--bbox_bounding', type=float, default=750, help="Bounding box size for radius mode (default: 750)")
     parser.add_argument('--center', nargs=2, type=float, metavar=('x','y'), help="Center for circular clipping (in target CRS)")
     parser.add_argument('--crs', help=f"CRS for LAZ, defaults to header or {DEFAULT_CRS}")
     parser.add_argument('--output_dir','-o', required=True, help="Output directory")
@@ -347,11 +356,23 @@ def main():
     # Determine bounds and optional circle
     circle = None
     circle_wkt = None
+
+    # Set bbox to be a 1500 side square around center if radius mode and no bbox provided
+    if args.radius and not args.bbox:
+        if args.center:
+            center = tuple(args.center)
+        else:
+            las = laspy.read(args.input)
+            dom = (las.header.min[0], las.header.min[1], las.header.max[0], las.header.max[1])
+            center = ((dom[0]+dom[2]) / 2, (dom[1]+dom[3]) / 2)
+        
+        args.bbox = compute_circle_bounds(center, args.bbox_bounding) # 1500x1500 box
     
     if args.area_geojson:
         bounds = load_area_extent_geojson(args.area_geojson, laz_crs)
     elif args.bbox:
         bounds = args.bbox
+        print(f"Using BBOX: {bounds}")
     else:
         # Radius Mode logic
         if args.center:
@@ -398,7 +419,7 @@ def main():
     # Apply polyprep
     print("Applying polyprep to osm_buildings...")
     try:
-        process_polygons(buildings_geojson, polyprep_geojson, buffer_size=2.0, apply_convex_hull=False, remove_holes=1, simplification_tol=0.5)
+        process_polygons(buildings_geojson, polyprep_geojson, buffer_size=3.0, apply_convex_hull=False, remove_holes=2, simplification_tol=1.5)
         print(f"Polyprep saved to {polyprep_geojson}")
     except Exception as e:
         print(f"Polyprep failed ({e}). Using raw OSM file for config.")
@@ -409,6 +430,7 @@ def main():
         output_dir=args.output_dir,
         center_point=center_point,
         radius=args.radius,
+        bounds=bounds,
         ground_laz=ground_path,
         building_laz=building_path,
         polygon_geojson=polyprep_geojson,

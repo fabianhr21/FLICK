@@ -1,0 +1,19 @@
+#===FILEINFO:VERSION_CREATED:24.1.2 LAST_VERSION_MODIFIED:24.1.2===
+# 
+# ANSA Version
+#
+    ANSA_Version = 24.1.2
+
+# 
+
+# Octree Options
+# 
+    octree_parameters_name             = CFD parameters
+    maximum_surface_length             = 30.
+    maximum_length                     = 40.
+# 
+
+# SizeField Options
+# 
+    size_field_growth_rate                        = 1.25
+    size_field_variable_size_flag                 = false

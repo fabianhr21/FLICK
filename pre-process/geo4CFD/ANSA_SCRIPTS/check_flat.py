@@ -13,9 +13,9 @@ import sys
 deck = constants.OPENFOAM
 params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
 working_directory = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
-file_path = "/home/fabianh/GEO_CASES/BARCELONA/295-120/"
-input_file = "295-120_Buildings"
-target_path = "/home/fabianh/GEO_CASES/BARCELONA/295-120/"
+file_path = "/home/fabianh/ANSA/CASES_MESHES/BARCELONA/264-44/output/"
+input_file = "264-44_Buildings"
+target_path = "/home/fabianh/ANSA/CASES_MESHES/BARCELONA/264-44/output/"
 
 
 def generate_geo(geo_script, input_file,y_length):
@@ -354,11 +354,13 @@ def main():
     arg2 = []
     arg2.append([1.0, 0.0, 0.0, ])
     arg2.append([0.0, 1.0, 0.0, ])
-    buildings_sb = ansa.base.SizeBoxOrtho(buildings_shells, directions=arg2,  max_length_surface=10,max_length_volume=16)
+    buildings_sb = ansa.base.SizeBoxOrtho(loaded_elements=buildings_shells, min_flag=False,  max_length_surface=16,max_length_volume=24)
+    #ortho_sb = ansa.base.SizeBoxOrtho(loaded_elements=buildings_shells, directions=arg2,  max_length_surface=10,max_length_volume=16)
+    #base.SizeBoxSplitProject(buildings_sb, ortho_sb)
     ## Campus
-    min_coords = [x_min+(5*avg_height),y_min+ (5*avg_height),z_min]
-    max_coords = [x_max-(5*avg_height),y_max -(5*avg_height),z_max]
-    campus_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 6, 10)   
+    # min_coords = [x_min+(14*avg_height),y_min+ (14*avg_height),z_min]
+    # max_coords = [x_max-(14*avg_height),y_max -(14*avg_height),z_max]
+    # campus_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 6, 10)   
     ## ABL
     min_coords = [x_min - (18*avg_height), y_min,z_min]
     max_coords = [x_max,y_max,z_max]
@@ -378,10 +380,10 @@ def main():
     wake2_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 60, 80)
     
     # Save Size Boxes to a list
-    sbs = [buildings_sb, campus_sb, abl_sb, close_ground_sb, wake1_sb, wake2_sb]
+    sbs = [abl_sb, close_ground_sb, wake1_sb, wake2_sb, buildings_sb]
     
     #Uses STL algorith to recover exact geometry
-    mesh.AspacingSTL('1%', 50, 30.0, 0.0001)
+    mesh.AspacingSTL('1%', 50, 30.0, 0.001)
     #mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
@@ -395,7 +397,7 @@ def main():
     print("Elements released from faces\n")
     
     # Describe the solid
-    mesh.IntersectSolidDescription(0, fuse_distance = 1, improve_mesh_quality=False)
+    mesh.IntersectSolidDescription(0, fuse_distance = 0.5, improve_mesh_quality=False)
     print("Solid description of the buildings done\n")
     
     # Create surface geometry
@@ -420,13 +422,39 @@ def main():
     
     # Convert Size Boxes to Size Field
     size_field = mesh.ConvertSizeBoxesToSizeField(size_boxes=sbs)
+    # Assing values to size field
+    size_field = base.GetEntity(ansa.constants.NASTRAN, "SIZE FIELD", 1)
+
+    sf_rules = mesh.GetRulesFromSizeField(size_field)
+	
+	#  [abl_sb, close_ground_sb, wake1_sb, wake2_sb,buildings_sb]
+    ret_val = mesh.ReadSizeFieldRuleParams(
+        rule=sf_rules[0], mpar_file= working_directory + "/ABL.ansa_mpar"
+    )
+    print(ret_val)
+    ret_val = mesh.ReadSizeFieldRuleParams(
+        rule=sf_rules[1], mpar_file= working_directory + "/CloseGround.ansa_mpar"
+    )
+    print(ret_val)    
+    ret_val = mesh.ReadSizeFieldRuleParams(
+        rule=sf_rules[2], mpar_file= working_directory + "/Wake1.ansa_mpar"
+    )
+    print(ret_val)    
+    ret_val = mesh.ReadSizeFieldRuleParams(
+        rule=sf_rules[3], mpar_file= working_directory + "/Wake2.ansa_mpar"
+    )
+    print(ret_val)    
+    ret_val = mesh.ReadSizeFieldRuleParams(
+        rule=sf_rules[4], mpar_file= working_directory + "/CityClose.ansa_mpar"
+    )
+    print(ret_val)
     
     # Creates PID for later
     topPrecursor = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "topPrecursor"})
     groundPrecursor = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "groundPrecursor"})
     
     # Create groundBuildings
-    #GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,avg_height)
+    GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,avg_height)
     
     # Simplify faces
     ret = mesh.SimplifyMacros(
@@ -469,7 +497,7 @@ def main():
     # Project abl size box to sides
     ## Close ground
     min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
-    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),48]
+    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),70]
     # Create Morph box for project
     morph.MorphMinMax(None, min_coords, max_coords)
     m1 = base.CollectEntities(deck, None, "MORPHEDGE")
@@ -489,6 +517,27 @@ def main():
     arg3 = {}
     arg3['Normal'] = (0.0, 0.0, 0.0, )
     cons = base.ConsProject(entities=morph_perimeters, faces_array=in_out_faces, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
+    ##############33
+    buildings = base.GetEntity(deck, "SHELL_PROPERTY", 1)
+    #Morph box to project to ground
+    morph.MorphOrtho(loaded_elements=buildings, min_flag=True)
+    m1 = base.CollectEntities(deck, None, "MORPHFACE")
+    
+    morph.MorphOffset(m1, 10,0)
+    edges = base.CollectEntities(deck, m1, "MORPHEDGE")
+    # Converto morph box to curve
+    morph_perimeters2 = morph.MorphConvert("MorphEdgesToCurve", edges, {"delete_original": True})
+    m1 = base.CollectEntities(deck, None, "MORPHBOX")
+    morph.MorphBoxDel(m1)
+    # Get ground face to project
+    ground_face = base.GetEntity(constants.NASTRAN, "PSHELL", 10)
+    search_type = ("FACE",)
+    groundbuilding_face = base.CollectEntities(constants.NASTRAN, [ground_face], search_type,recursive=False)
+    # Cons project
+    arg3 = {}
+    arg3['Normal'] = (0.0, 0.0, 0.0, )
+    cons = base.ConsProject(entities=morph_perimeters2, faces_array=groundbuilding_face, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
+
 
     # Save domain dimensions, append if exists
     domain_file = open(target_path + "domain_dimensions.txt", "w")
@@ -521,39 +570,39 @@ def main():
     bottom_ents = []
     base.All()
     # Select bottom inlet
-    orXYZ(1,0,1,"Less than","Less than","Less than",x_min - xn+50,1,50)
+    orXYZ(1,0,1,"Less than","Less than","Less than",x_min - xn+20,1,80)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':14})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//12}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//50}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "2")
         bottom_ents.append(ent[0])
     else:
         print("Bottom inlet face not found")
     
     base.All()
     # Select bottom outlet
-    orXYZ(1,0,1,"Greater than","Greater than","Less than",x_max+xp-50,1,50)
+    orXYZ(1,0,1,"Greater than","Greater than","Less than",x_max+xp-20,1,80)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':12})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//12}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//50}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "2")
         bottom_ents.append(ent[0])
     else:
         print("Bottom outlet face not found")
     
     base.All()
     # Select bottom north
-    orXYZ(0,1,1,"Greater than","Greater than","Less than",1,y_max+yp-50,50)
+    orXYZ(0,1,1,"Greater than","Greater than","Less than",1,y_max+yp-20,80)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':15})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//50}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "2")
         bottom_ents.append(ent[0])
     else:
         print("Bottom north face not found")
@@ -561,13 +610,13 @@ def main():
 
     base.All()
     # Select bottom south
-    orXYZ(0,1,1,"Less than","Less than","Less than",1,y_min-yn+50,50)
+    orXYZ(0,1,1,"Less than","Less than","Less than",1,y_min-yn+20,80)
     ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':13})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//50}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "2")
         bottom_ents.append(ent[0])
     else:
         print("Bottom south face not found") 
@@ -575,6 +624,8 @@ def main():
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
+    
+    batchmesh.DistributeAllItemsToScenarios()
 
     # Change geo file with y_length
     if os.path.exists(target_path+input_file+".geo"):

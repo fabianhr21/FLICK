@@ -1,15 +1,11 @@
 Mesh.MshFileVersion = 2.2;
 SetFactory("OpenCASCADE");
 
-Mesh.CgnsConstructTopology = 1;
-
 Mesh.CreateTopologyMsh2 = 1;
 
-Mesh.SaveTopology = 1;
+Merge "{{BASENAME}}_Buildings.msh";
 
-Merge "../{{input_file}}.cgns";
-
-SetOrder 1;
+SetOrder 2;
 
 Physical Surface("buildings",1) = {2};
 Physical Surface("groundDomain",2) = {7};
@@ -27,3 +23,4 @@ Physical Volume("fluid",12) = {1};
 
 Periodic Surface {14} = {12} Translate {-{{prec_length}}, 0, 0};
 Periodic Surface {15} = {13} Translate {0, {{y_length}}, 0};
+

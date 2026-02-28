@@ -9,9 +9,10 @@ import sys
 import math
 
 deck = constants.OPENFOAM
-output_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/652-227/output/"
-output_name = "652-227_Buildings"
-distance = -5040  # Precursor length spanwise
+case = "295-120"
+output_path = "/home/fabianh/ANSA/CASES_MESHES/BARCELONA/" + case + "/output/"
+output_name = case +"_Buildings"
+# distance = -3200 # Precursor length spanwise
 
 def splitTOhexa():
 	m =utils.Messenger()
@@ -150,15 +151,24 @@ def main():
 	inlet = base.GetEntity(deck, "SHELL_PROPERTY", 2)
 	base.GeoTranslate("COPY","AUTO_OFFSET","SAME PART","COPY",-100,0,0,inlet,keep_connectivity=True,draw_results=False)
 	
-	# # Precursor parameters
-	# distance = -5000
-	element_length = 20
+    # Read avg_height from domain_dimensions.txt
+	domain_file_path = output_path + "domain_dimensions.txt"
+	with open(domain_file_path, "r") as domain_file:
+		lines = domain_file.readlines()
+		for line in lines:
+			if line.startswith("precursor_length"):
+				length=float(line.split('=')[1].strip())
+				print(length)
+				distance = math.ceil(length)
+				print("Precursor length read from file:", distance)
+				break
+            
 
 	# Create Precursor
 	precursor_outlet = base.GetEntity(deck, "SHELL_PROPERTY", 14)
 	source = base.CollectEntities(deck, precursor_outlet, "SHELL")
 	extrude = mesh.VolumesExtrude()
-	extrusion = extrude.offset(source=source, source_remove=source, steps=25, distance=distance)
+	extrusion = extrude.offset(source=source, source_remove=source, steps=25, distance=-distance)
 	base.DeleteEntity(precursor_outlet,True,True)
 	
 	#Orient result

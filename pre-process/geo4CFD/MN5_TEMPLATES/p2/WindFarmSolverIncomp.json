@@ -1,0 +1,65 @@
+{
+   "type":"WindFarmSolverIncomp",
+
+   "mesh_h5_file_path":"",
+   "mesh_h5_file_name":"{{BASENAME}}_Buildings_p2",
+
+   "results_h5_file_path":"",
+   "results_h5_file_name":"results",
+
+   "final_istep":20000002,
+   "maxPhysTime":10000.0,
+
+   "saveInitialField":false,
+
+   "save_logFile_first":1,
+   "save_logFile_step":10,
+
+   "save_resultsFile_first":1,
+   "save_resultsFile_step":100000,
+
+   "save_restartFile_first":1,
+   "save_restartFile_step":1000,
+
+   "loadRestartFile":false,
+   "restartFile_to_load":2,
+
+   "continue_oldLogs":false,
+
+   "saveAvgFile":true,
+   "loadAvgFile":false,
+
+   "initial_avgTime": 8000.0,
+
+   "saveSurfaceResults":false,
+
+   "flag_les":1,
+   "maxIter":20,
+   "tol":1e-5,
+   "flag_walave":true,
+   "period_walave":600.0,
+   "flag_fs_fix_pressure":true,  
+
+   "cfl_conv":0.8,
+
+   "rho0":1.0,
+   "Lz":"{{LZ}}",
+   "Lhub":100.0,
+   "vinf":6.1,
+   "rough":1.53,
+   "wind_alpha": 90.0,
+
+   "bouCodes":
+   [
+      {"id":1, "bc_type":"bc_type_non_slip_adiabatic"},
+      {"id":2, "bc_type":"bc_type_slip_wall_model"},
+      {"id":3, "bc_type":"bc_type_slip_wall_model"},
+      {"id":4, "bc_type":"bc_type_slip_adiabatic"},
+      {"id":5, "bc_type":"bc_type_slip_adiabatic"},
+      {"id":6, "bc_type":"bc_type_far_field"},
+      {"id":7, "bc_type":"bc_type_far_field"},
+      {"id":8, "bc_type":"bc_type_recirculation_inlet"},
+      {"id":9, "bc_type":"bc_type_outlet_incomp"},
+      {"id":10, "bc_type":"bc_type_non_slip_adiabatic"}
+   ]
+}
