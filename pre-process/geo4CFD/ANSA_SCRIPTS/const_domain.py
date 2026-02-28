@@ -1,9 +1,8 @@
 import ansa
 from ansa import base, mesh, constants,session,dm
 from ansa import *
-import CreateDomain 
+import CreateDomainConst
 from GetVertical import separate_faces_by_vector
-import orXYZ
 import os 
 import sys
 import math
@@ -168,6 +167,76 @@ def separate_faces_by_vector(deck, x, y, z, angle, tol=0.1, pid=1,to_pid=11):
         base.Or(matched)
     return matched
 
+def orXYZ(xchecked, ychecked, zchecked, xstatus, ystatus, zstatus, xval, yval, zval):
+	base.BlockRedraws(True)
+	deck = constants.OPENFOAM
+	base.SetCurrentMenu("MESH")
+
+	entities = []
+	type = ["SHELL", "SOLID"]
+	faces = base.CollectEntities(deck, None, "FACE", filter_visible = True)
+	shells = base.CollectEntities(deck, None, type, filter_visible = True)
+	for face in faces:
+		val = base.GetEntityCardValues(deck, face, ("Meshed With", ))
+		if(val["Meshed With"] == "UNMESHED"):	
+			entities.append(face)
+	for shell in shells:
+		entities.append(shell)
+	if not entities:
+		print("There are no visible Shells,Solids or Faces")
+		print("Script execution stopped")
+		base.BlockRedraws(False)		
+		return True
+
+#	print(str(xchecked)+" , "+str(ychecked)+","+str(zchecked)+", "+xstatus+", "+ystatus+", "+zstatus+", "+str(xval)+", "+str(yval)+", "+str(zval))
+	xcollected = []
+	ycollected = []
+	zcollected = []
+#If X is checked then the code below will be executed
+	if(xchecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, xstatus, xval, x)
+			if ret is not None:
+				xcollected.append(ret)
+	base.Not(xcollected)
+	
+#If Y is checked then the code below will be executed
+	if(ychecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, ystatus, yval, y)
+			if ret is not None:
+				ycollected.append(ret)
+	base.Not(ycollected)
+	
+#If Z is checked then the code below will be executed
+	if(zchecked == 1):
+		for ent in entities:
+			(x, y, z) = base.Cog(ent)
+			ret = _main_core(ent, zstatus, zval, z)
+			if ret is not None:
+				zcollected.append(ret)
+	base.Not(zcollected)    
+	base.BlockRedraws(False)	
+	
+def _main_core(iso_ent, status, user_val, cog_val):
+#We perform exactly the opposite action
+#Since we work on visible entities and we need to isolate first in X then in Y and at the end in Z
+#We cannot run the OR function. For this reason we run NOT, but on the exactly opposite directions!
+	if(status == "Less than"):
+		if(cog_val > user_val):
+			collected = iso_ent
+			return collected
+		else:
+			return None
+	else:
+		if(cog_val < user_val):
+			collected = iso_ent
+			return collected
+		else:
+			return None
+
 def main():
 	# Input StereoLithography from City4CFD
     session.New("discard")
@@ -202,20 +271,28 @@ def main():
     height = z_max - z_min
     print("Max building height:", height)
     h_max = height
-
+    # Read avg_height from domain_dimensions.txt
+    domain_file_path = target_path + "domain_dimensions.txt"
+    with open(domain_file_path, "r") as domain_file:
+        lines = domain_file.readlines()
+        for line in lines:
+            if line.startswith("avg_h"):
+                avg_height = float(line.split('=')[1].strip())
+                print("Average building height:", avg_height)
+                break
     # Creates domain and assign different PID to faces, core script modified (change in your directory)
     #xp,yp,zp,xn,yn,zn
-    xp = 0.5*h_max
-    yp = 0.5*h_max
-    zp = 720
-    xn = 0.5*h_max
-    yn = 0.5*h_max
+    xp = 1*h_max
+    yp = 1*h_max
+    zp = 40*avg_height
+    xn = 1*h_max
+    yn = 1*h_max
     zn = z_min
     x_length_domain = x_length + xp + xn
     y_length_domain = y_length + yp + yn
-    z_length_domain = (z_max - z_min) + zp + (0.5*h_max)
+    z_length_domain = (z_max - z_min) + zp + (1*h_max)
     print("Domain lengths:", x_length_domain, y_length_domain, z_length_domain)
-    CreateDomain._multibox(xp,yp,zp,xn,yn,zn,False)
+    CreateDomainConst._multibox(xp,yp,zp,xn,yn,zn,False)
 
 	
 	# Select working parts and recognize FM perimeters
@@ -229,8 +306,6 @@ def main():
     
     # Separate PID
     base.PidToPart()
-    
-
 
 	# Create ABL	for sizing
     min_coords = [x_min - xn, y_min - yn, z_min]
@@ -239,7 +314,7 @@ def main():
 
     #Uses STL algorith to recover exact geometry
     #mesh.AspacingSTL('1%', 50, 0, 0.001)
-    mesh.AspacingSTL("5%", 50.0, 0.0, 1)
+    mesh.AspacingSTL("5%", 50.0, 0.0, 0.1)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
     mesh.CreateStlMesh()
@@ -265,7 +340,7 @@ def main():
     options = ["CRACKS", "OVERLAPS", "NEEDLE FACES", "COLLAPSED CONS", "UNCHECKED FACES", "TRIPLE CONS"]
     fix = [1, 1, 1, 1, 1, 1]
     errors = base.CheckAndFixGeometry(0, options, fix, True, True)
-    print(errors)
+    print("Error type:" ,errors)
     if errors != None:
     	print('Total remaining errors: ', len(errors['failed']))
     	print('Type of remaining errors: ', len(errors['remaining_errors']))
@@ -277,7 +352,8 @@ def main():
     
     # Convert Size Boxes to Size Field
     # size_field = mesh.ConvertSizeBoxesToSizeField(size_boxes=sbs)
-    
+    # Separate Roofs from Walls
+    separate_faces_by_vector(constants.NASTRAN, 0, 0, 1, 30, tol=0.1, pid=1,to_pid=9) 
     # Creates PID for later
     bot_out = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "bot_out"})
     bot_south = base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "bot_south"})
@@ -299,32 +375,147 @@ def main():
     )
     print(ret)
     
-    # Separate Roofs from Walls
-    # separate_faces_by_vector(constants.NASTRAN, 0, 0, 1, 30, tol=0.1, pid=1,to_pid=11)
+
     # # Delete north face
-    north_face = base.GetEntity(deck, "SHELL_PROPERTY", 3)
-    south_face = base.GetEntity(deck, "SHELL_PROPERTY", 5)
+    north_face = base.GetEntity(deck, "SHELL_PROPERTY", 8)
+    south_face = base.GetEntity(deck, "SHELL_PROPERTY", 6)
     base.DeleteEntity(north_face, True,compress=False)
-    base.CreateEntity(deck, "SHELL_PROPERTY", {"PID": 3, "Name": "lateralDomainNorth"})
+    base.CreateEntity(deck, "SHELL_PROPERTY", {"PID": 8, "Name": "lateralDomainNorth"})
     print("North face deleted\n")
 
     # Create north face pid linked to south
-    base.GeoTranslate("LINK",-2,"SAME PART","COPY",0,y_length_domain,0,south_face,keep_connectivity=True,draw_results=True)
+    base.GeoTranslate("LINK",2,"SAME PART","COPY",0,y_length_domain,0,south_face,keep_connectivity=True,draw_results=True)
     # Delete outlet face
-    outlet_face = base.GetEntity(deck, "SHELL_PROPERTY", 7)
+    outlet_face = base.GetEntity(deck, "SHELL_PROPERTY", 5)
     base.DeleteEntity(outlet_face, True,compress=False)
-    base.CreateEntity(deck, "SHELL_PROPERTY", {"PID": 7, "Name": "outlet"})
+    base.CreateEntity(deck, "SHELL_PROPERTY", {"PID": 5, "Name": "outlet"})
     print("Outlet face deleted\n")
 
     # Create outlet face pid linked to inlet
-    inlet_face = base.GetEntity(deck, "SHELL_PROPERTY", 2)
-    base.GeoTranslate("LINK",5,"SAME PART","COPY",x_length_domain,0,0,inlet_face,keep_connectivity=True,draw_results=True)
+    inlet_face = base.GetEntity(deck, "SHELL_PROPERTY", 7)
+    base.GeoTranslate("LINK",-2,"SAME PART","COPY",x_length_domain,0,0,inlet_face,keep_connectivity=True,draw_results=True)
     
+    base.All()
     base.Topo()
     base.Orient()
     # Save
     base.SaveAs(target_path+input_file+".ansa")
     print (input_file, "saved\n")    
+    base.All()
+    # Project abl size box to sides
+    ## Close ground
+    min_coords = [x_min-(1*h_max),y_min- (1*h_max),z_min]
+    max_coords = [x_max+(1*h_max),y_max +(1*h_max),48]
+    # Create Morph box for project
+    morph.MorphMinMax(None, min_coords, max_coords)
+    m1 = base.CollectEntities(deck, None, "MORPHEDGE")
+    # COnverto morph box to curve
+    morph_perimeters = morph.MorphConvert("MorphEdgesToCurve", m1, {"delete_original": True})
+    m = base.CollectEntities(deck, None, "MORPHBOX")
+    morph.MorphBoxDel(m)
+    # Get faces to project
+    in_face = base.GetEntity(constants.NASTRAN, "PSHELL", 7)
+    out_face = base.GetEntity(constants.NASTRAN, "PSHELL", 5)
+    north_south = base.GetEntity(constants.NASTRAN, "PSHELL", 8)
+    search_type = ("FACE",)
+    in_out_faces = base.CollectEntities(constants.NASTRAN, [in_face,out_face,north_south], search_type,recursive=False)
+    # Collect curves
+    curves = base.CollectEntities(deck,None,"CURVE")
+    # Cons project
+    arg3 = {}
+    arg3['Normal'] = (0.0, 0.0, 0.0, )
+    cons = base.ConsProject(entities=morph_perimeters, faces_array=in_out_faces, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
+    # Save domain dimensions
+    domain_file = open(target_path+"domain_dimensions.txt", "w")
+    domain_file.write(f"avg_h={avg_height}\n")
+    domain_file.write(f"x_min: {x_min - xn}\n")
+    domain_file.write(f"x_max: {x_max + xp}\n")
+    domain_file.write(f"y_min: {y_min - yn}\n")
+    domain_file.write(f"y_max: {y_max + yp}\n")
+    domain_file.write(f"z_min: {z_min - 0.5*h_max}\n")
+    domain_file.write(f"z_max: {z_max + zp}\n")
+    domain_file.write(f"x_length: {x_length_domain}\n")
+    domain_file.write(f"y_length: {y_length_domain}\n")
+    domain_file.write(f"z_length: {z_length_domain}\n")
+    domain_file.write(f"Number in x: {x_length_domain/12}\n")
+    domain_file.write(f"Number in y: {y_length_domain/12}\n")
+
+    domain_file.close()
+    
+    if errors != None:
+        base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "ERRORS"})
+
+
+    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario_CONST.ansa")
+    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario_CONST.ansa")
+    
+    # Save
+    base.SaveAs(target_path+input_file+".ansa")
+    print (input_file, "saved\n")    
+    
+    bottom_ents = []
+    base.All()
+    # Select bottom inlet
+    orXYZ(1,0,1,"Less than","Less than","Less than",x_min - xn+5,1,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':7})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom inlet face not found")
+    
+    base.All()
+    # Select bottom outlet
+    orXYZ(1,0,1,"Greater than","Greater than","Less than",x_max+xp-5,1,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':5})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom outlet face not found")
+    
+    base.All()
+    # Select bottom north
+    orXYZ(0,1,1,"Greater than","Greater than","Less than",1,y_max+yp-15,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':8})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom north face not found")
+    
+
+    base.All()
+    # Select bottom south
+    orXYZ(0,1,1,"Less than","Less than","Less than",1,y_min-yn+15,50)
+    ent = base.CollectEntities(deck, None,"FACE", filter_visible=True)
+    if ent != []:
+        base.SetEntityCardValues(deck, ent[0], {'PID':6})
+        cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//12}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
+        bottom_ents.append(ent[0])
+    else:
+        print("Bottom south face not found") 
+    base.Or(bottom_ents)
+    
+    mesh.ReadMeshParams(params)
+    mesh.CreateFreeMesh()
+
+    # Change geo file with y_length
+    if os.path.exists(target_path+input_file+".geo"):
+        generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
+    else:
+        print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
 
 
 if __name__ == '__main__':
