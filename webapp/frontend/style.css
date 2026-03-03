@@ -1,0 +1,182 @@
+/* FLICK Wind Webapp – styles */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sidebar-w: 300px;
+  --bg-dark:   #1a1d23;
+  --bg-panel:  #22262e;
+  --accent:    #4f9cf9;
+  --text:      #e2e8f0;
+  --text-dim:  #8899aa;
+  --border:    #333a45;
+  --radius:    8px;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+#sidebar h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+/* ── Upload zone ─────────────────────────────────────────────── */
+#drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+#drop-zone.dragover,
+#drop-zone:hover {
+  border-color: var(--accent);
+  background: rgba(79,156,249,0.08);
+  color: var(--text);
+}
+#drop-zone input[type=file] { display: none; }
+#drop-zone .icon { font-size: 1.8rem; margin-bottom: 8px; }
+#file-name {
+  font-size: 0.78rem;
+  color: var(--accent);
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+/* ── Controls ────────────────────────────────────────────────── */
+.ctrl-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+.ctrl-label span { color: var(--text); font-weight: 600; }
+
+#wind-slider {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+#run-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+#run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+#run-btn:not(:disabled):hover { opacity: 0.85; }
+
+/* ── Progress ────────────────────────────────────────────────── */
+#progress-section { display: flex; flex-direction: column; gap: 6px; }
+#status-msg {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  min-height: 1.2em;
+}
+#progress-bar-wrap {
+  background: var(--bg-dark);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+#progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+/* ── Pipeline log ────────────────────────────────────────────── */
+#log-output {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  font-size: 0.68rem;
+  font-family: 'Courier New', monospace;
+  color: #a8c0d6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+/* ── Legend ──────────────────────────────────────────────────── */
+#legend { display: none; flex-direction: column; gap: 6px; }
+#legend .legend-title {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+#legend-ramp {
+  height: 14px;
+  border-radius: 3px;
+  background: linear-gradient(to right,
+    #00007f, #0000ff, #007fff, #00ffff,
+    #7fff7f, #ffff00, #ff7f00, #ff0000);
+}
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+}
+
+/* ── Three.js canvas ─────────────────────────────────────────── */
+#canvas-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#canvas-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+#hint {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+  pointer-events: none;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  body { flex-direction: column; }
+  #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+  #canvas-wrap { flex: 1; }
+}

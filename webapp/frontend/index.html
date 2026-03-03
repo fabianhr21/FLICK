@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLICK – Wind Speed Viewer</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Three.js r158 via importmap -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+
+<!-- ── Sidebar ────────────────────────────────────────────── -->
+<aside id="sidebar">
+  <h1>FLICK Wind</h1>
+
+  <!-- Upload -->
+  <div id="drop-zone" role="button" tabindex="0"
+       aria-label="Drop STL file here or click to browse">
+    <div class="icon">📂</div>
+    <div>Drop STL here<br>or click to browse</div>
+    <input type="file" id="file-input" accept=".stl" />
+    <div id="file-name"></div>
+  </div>
+
+  <!-- Wind direction -->
+  <div>
+    <div class="ctrl-label">
+      Wind direction &nbsp;
+      <span id="angle-label">0°</span>
+    </div>
+    <input type="range" id="wind-slider"
+           min="0" max="360" step="22.5" value="0" />
+  </div>
+
+  <!-- Run button -->
+  <button id="run-btn" disabled>▶ Run pipeline</button>
+
+  <!-- Progress -->
+  <div id="progress-section">
+    <div id="status-msg">Upload an STL to begin.</div>
+    <div id="progress-bar-wrap">
+      <div id="progress-bar"></div>
+    </div>
+  </div>
+
+  <!-- Pipeline log -->
+  <div id="log-section" style="display:none">
+    <div class="ctrl-label" style="margin-top:12px">Pipeline output</div>
+    <pre id="log-output"></pre>
+  </div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="legend-title">Wind speed magnitude (m/s)</div>
+    <div id="legend-ramp"></div>
+    <div class="legend-labels">
+      <span id="legend-min">0.00</span>
+      <span id="legend-max">1.00</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Three.js viewport ───────────────────────────────────── -->
+<div id="canvas-wrap">
+  <div id="hint">Scroll to zoom · drag to orbit · right-drag to pan</div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

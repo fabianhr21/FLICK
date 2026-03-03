@@ -272,7 +272,7 @@ if __name__ == "__main__":
                 if mpi_rank == 0:
                     pyQvarsi.pprint(0, f"[Timing] H5 save: {t5 - t4:.3f} seconds", flush=True)
                             # Append U and V features
-                    append_UV_features(POST_DIR + rotated_stl_basename + f'-{n}')
+                    append_UV_features(POST_DIR + rotated_stl_basename + f'-{n}', N_POINTS=N_POINTS)
                     pyQvarsi.pprint(0, f"U and V features added to {POST_DIR + rotated_stl_basename + f'-{n}-geodata.h5'}", flush=True)
 
                 pyQvarsi.pprint(0, f"[Rank {mpi_rank}] Step {n} total time: {t5 - t0:.3f} seconds\n", flush=True)

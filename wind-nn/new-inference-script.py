@@ -225,7 +225,6 @@ if __name__ == '__main__':
             # file=f'{args.dataset_base_path}{args.data_sample_basename}-{GEO}-{ANGLE}-{SAMPLE_ID}.h5'
             # print(f'Loading file {file}')
 
-            model.train()
             x,output=load_input_sample(args,file_path)
 
             x=x.to(device)
