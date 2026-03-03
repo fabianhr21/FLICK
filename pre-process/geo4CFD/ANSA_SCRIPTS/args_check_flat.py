@@ -317,7 +317,7 @@ def main(input_file_dir, working_directory,input_path, target_path):
 
     height = z_max - z_min
     print("Max building height:", height)
-    avg_height = height
+    max_height = height
 
     # Read avg_height from domain_dimensions.txt
     domain_file_path = target_path + "domain_dimensions.txt"
@@ -331,11 +331,17 @@ def main(input_file_dir, working_directory,input_path, target_path):
 
     # Creates domain and assign different PID to faces, core script modified (change in your directory)
     #xp,yp,zp,xn,yn,zn
-    xp =40*avg_height
-    yp = 30*avg_height
-    zp = 20*avg_height
-    xn = 20*avg_height
-    yn = 30*avg_height
+    xp_factor = 65
+    yp_factor = 30
+    zp_factor = 40
+    xn_factor = 20
+    yn_factor = 30
+
+    xp = xp_factor*avg_height
+    yp = yp_factor*avg_height
+    zp = zp_factor*avg_height
+    xn = xn_factor*avg_height
+    yn = yn_factor*avg_height
     zn = z_min
     x_length_domain = x_length + xp + xn
     y_length_domain = y_length + yp + yn
@@ -375,8 +381,8 @@ def main(input_file_dir, working_directory,input_path, target_path):
     print(min_coords, max_coords)
     abl_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 30, 40)
     ## Close ground
-    min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
-    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),z_max+avg_height]
+    min_coords = [x_min-(xn_factor*avg_height),y_min- (yn_factor*avg_height),z_min]
+    max_coords = [x_max+(xp_factor*avg_height),y_max +(yp_factor*avg_height),z_max+avg_height]
     close_ground_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 85, 85)
     ## Wake 1 (10h)
     min_coords = [x_max - avg_height,y_min,z_min]
@@ -391,7 +397,7 @@ def main(input_file_dir, working_directory,input_path, target_path):
     sbs = [abl_sb, close_ground_sb, wake1_sb, wake2_sb,buildings_sb]
     
     #Uses STL algorith to recover exact geometry
-    mesh.AspacingSTL('1%', 50, 30.0, 0.1)
+    mesh.AspacingSTL('1%', 50, 30.0, 0.001)
     #mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
@@ -504,8 +510,8 @@ def main(input_file_dir, working_directory,input_path, target_path):
     base.All()
     # Project abl size box to sides
     ## Close ground
-    min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
-    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),70]
+    min_coords = [x_min-(xn_factor*avg_height),y_min- (yn_factor*avg_height),z_min]
+    max_coords = [x_max+(xp_factor*avg_height),y_max +(yp_factor*avg_height),70]
     # Create Morph box for project
     morph.MorphMinMax(None, min_coords, max_coords)
     m1 = base.CollectEntities(deck, None, "MORPHEDGE")
@@ -528,6 +534,7 @@ def main(input_file_dir, working_directory,input_path, target_path):
 
     # Save domain dimensions, append if exists
     domain_file = open(target_path + "domain_dimensions.txt", "w")
+    domain_file.write(f"max_height={max_height}\n")
     domain_file.write(f"avg_h={avg_height}\n")
     domain_file.write(f"x_min={x_min - xn}\n")
     domain_file.write(f"x_max={x_max + xp}\n")
@@ -620,14 +627,14 @@ def main(input_file_dir, working_directory,input_path, target_path):
     else:
         print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
         
-    # Move witness.txt to MN5 folder
-    witness_src = target_path + "witness.txt"
-    witness_dst = target_path + "MN5/witness.txt"
-    if os.path.exists(witness_src):
-        shutil.move(witness_src, witness_dst)
-        print("witness.txt moved to MN5 folder.")
-    else:
-        print("witness.txt not found, skipping move.")
+    # # Move witness.txt to MN5 folder
+    # witness_src = target_path + "witness.txt"
+    # witness_dst = target_path + "MN5/witness.txt"
+    # if os.path.exists(witness_src):
+    #     shutil.copy(witness_src, witness_dst)
+    #     print("witness.txt moved to MN5 folder.")
+    # else:
+    #     print("witness.txt not found, skipping move.")
 
     # Save
     base.SaveAs(target_path+input_file+".ansa")

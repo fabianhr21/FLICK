@@ -35,3 +35,4 @@ date
 # use as many tasks per node in mpirun as gpu to target
 mpirun -n 12 tool_meshConversorPar input_file.dat
 date
+sbatch run.sh

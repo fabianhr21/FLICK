@@ -16,12 +16,12 @@
 #SBATCH --ntasks=20
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=20
-#SBATCH --time=48:00:00
+#SBATCH --time=02:00:00
 #SBATCH --gres=gpu:4
 #SBATCH --exclusive
 
 ### Queue and account
-#SBATCH --qos=acc_resa
+#SBATCH --qos=acc_debug
 #SBATCH --account=upc76
 
 ### MN% modules

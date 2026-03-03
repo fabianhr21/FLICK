@@ -2,6 +2,8 @@ import trimesh
 import numpy as np
 import os
 import argparse
+import matplotlib.pyplot as plt
+from matplotlib.collections import PolyCollection
 
 
 def get_dominant_horizontal_direction(mesh):
@@ -202,15 +204,86 @@ def generate_witness_points(stl_file_path, path):
     
 
 
+def plot_witness_points(pedestrian_points, additional_points, path, stl_file_path):
+    ped = np.array(pedestrian_points)
+    add = np.array(additional_points) if additional_points else np.empty((0, 3))
+
+    # Project mesh triangles onto each 2D plane for geometry overlay
+    mesh = trimesh.load(stl_file_path, force='mesh')
+    tris = mesh.triangles  # (N, 3, 3)
+    tris_xy = tris[:, :, :2]       # drop Z → XY
+    tris_yz = tris[:, :, 1:]       # drop X → YZ
+
+    def add_geometry_xy(ax):
+        col = PolyCollection(tris_xy, facecolor='lightgray', edgecolor='none', alpha=0.4, zorder=1)
+        ax.add_collection(col)
+
+    def add_geometry_yz(ax):
+        col = PolyCollection(tris_yz, facecolor='lightgray', edgecolor='none', alpha=0.4, zorder=1)
+        ax.add_collection(col)
+
+    # --- Plot 1: XY plane at pedestrian level (1.5 m) ---
+    fig, ax = plt.subplots(figsize=(8, 8))
+    add_geometry_xy(ax)
+    ax.scatter(ped[:, 0], ped[:, 1], c='tab:blue', s=40, zorder=3, label='Pedestrian (z=1.5 m)')
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_title('Witness points – XY plane at pedestrian level (z = 1.5 m)')
+    ax.legend(loc='upper right')
+    ax.set_aspect('equal')
+    ax.autoscale()
+    ax.grid(True, linestyle='--', alpha=0.5)
+    fig.savefig(f'{path}/debug_witness_xy_pedestrian.png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+    # --- Plot 2: XY plane with all points ---
+    fig, ax = plt.subplots(figsize=(8, 8))
+    add_geometry_xy(ax)
+    if len(add):
+        ax.scatter(add[:, 0], add[:, 1], c='tab:orange', s=20, alpha=0.6, zorder=2, label='Additional')
+    ax.scatter(ped[:, 0], ped[:, 1], c='tab:blue', s=40, zorder=3, label='Pedestrian (z=1.5 m)')
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_title('Witness points – XY plane (all heights)')
+    ax.legend(loc='upper right')
+    ax.set_aspect('equal')
+    ax.autoscale()
+    ax.grid(True, linestyle='--', alpha=0.5)
+    fig.savefig(f'{path}/debug_witness_xy_all.png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+    # --- Plot 3: YZ plane (vertical distribution) ---
+    fig, ax = plt.subplots(figsize=(8, 6))
+    add_geometry_yz(ax)
+    if len(add):
+        ax.scatter(add[:, 1], add[:, 2], c='tab:orange', s=20, alpha=0.6, zorder=2, label='Additional')
+    ax.scatter(ped[:, 1], ped[:, 2], c='tab:blue', s=40, zorder=3, label='Pedestrian (z=1.5 m)')
+    ax.set_xlabel('Y (m)')
+    ax.set_ylabel('Z (m)')
+    ax.set_title('Witness points – YZ plane (vertical distribution)')
+    ax.legend(loc='upper right')
+    ax.autoscale()
+    ax.grid(True, linestyle='--', alpha=0.5)
+    fig.savefig(f'{path}/debug_witness_yz.png', dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+    print(f"Debug plots saved to {path}/debug_witness_xy_pedestrian.png, "
+          f"debug_witness_xy_all.png, debug_witness_yz.png")
+
+
 def arg_parse():
     parser = argparse.ArgumentParser(description="Analyze building heights from STL file.")
     parser.add_argument('-stl', '--stl_file', type=str, required=True, help="Path to the STL file.")
     parser.add_argument('-p', '--path', type=str, required=True, help="Output path for domain_dimensions.txt.")
+    parser.add_argument('-o', '--stl_output', type=str, required=True, help="Base output path; witness.txt and plots are saved to <stl_output>/MN5/.")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = arg_parse()
+    output_dir = os.path.join(args.stl_output, 'MN5')
+    os.makedirs(output_dir, exist_ok=True)
     analyze_buildings(args.stl_file, args.path)
-    generate_witness_points(args.stl_file,args.path)
+    pedestrian_points, additional_points = generate_witness_points(args.stl_file, output_dir)
+    plot_witness_points(pedestrian_points, additional_points, output_dir, args.stl_file)
     print("Analysis complete. Results saved to domain_dimensions.txt and witness_points.txt.")

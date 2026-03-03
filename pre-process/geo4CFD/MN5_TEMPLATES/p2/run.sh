@@ -16,7 +16,7 @@
 #SBATCH --ntasks=8
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=20
-#SBATCH --time=48:00:00
+#SBATCH --time=20:00:00
 #SBATCH --gres=gpu:4
 
 ### Queue and account

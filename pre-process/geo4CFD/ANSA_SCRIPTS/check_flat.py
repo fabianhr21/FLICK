@@ -13,25 +13,34 @@ import sys
 deck = constants.OPENFOAM
 params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
 working_directory = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
-file_path = "/home/fabianh/ANSA/CASES_MESHES/BARCELONA/264-44/output/"
-input_file = "264-44_Buildings"
-target_path = "/home/fabianh/ANSA/CASES_MESHES/BARCELONA/264-44/output/"
+file_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/654-317/output/"
+input_file = "654-317_Buildings"
+target_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/654-317/output/"
 
 
-def generate_geo(geo_script, input_file,y_length):
+def generate_geo(geo_script, target_geo, input_file,y_length,prec_length):
+    # Copy template to target location
+    if not os.path.exists(geo_script):
+        print(f"Error: Template geo script not found at '{geo_script}'.", file=sys.stderr)
+        sys.exit(1)
+    if not os.path.exists(os.path.dirname(target_geo)):
+        os.makedirs(os.path.dirname(target_geo))
+    
     # Read template
     with open(geo_script, "r") as f:
         geo = f.read()
 
     # Replace parameter
+    geo = geo.replace("{{prec_length}}", str(prec_length))
     geo = geo.replace("{{y_length}}", str(y_length))
     geo = geo.replace("{{input_file}}", str(input_file))
 
     # Save new file
-    with open(geo_script, "w") as f:
+    with open(target_geo, "w") as f:
         f.write(geo)
 
-    print(f"Generated: {geo_script}")
+    print(f"Generated: {target_geo}")
+
 
 def GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,avg_height):
 	deck = constants.NASTRAN
@@ -323,11 +332,17 @@ def main():
 
     # Creates domain and assign different PID to faces, core script modified (change in your directory)
     #xp,yp,zp,xn,yn,zn
-    xp =40*avg_height
-    yp = 30*avg_height
-    zp = 20*avg_height
-    xn = 20*avg_height
-    yn = 30*avg_height
+    xp_factor = 65
+    yp_factor = 30
+    zp_factor = 40
+    xn_factor = 20
+    yn_factor = 30
+
+    xp = xp_factor*avg_height
+    yp = yp_factor*avg_height
+    zp = zp_factor*avg_height
+    xn = xn_factor*avg_height
+    yn = yn_factor*avg_height
     zn = z_min
     x_length_domain = x_length + xp + xn
     y_length_domain = y_length + yp + yn
@@ -354,7 +369,7 @@ def main():
     arg2 = []
     arg2.append([1.0, 0.0, 0.0, ])
     arg2.append([0.0, 1.0, 0.0, ])
-    buildings_sb = ansa.base.SizeBoxOrtho(loaded_elements=buildings_shells, min_flag=False,  max_length_surface=16,max_length_volume=24)
+    buildings_sb = ansa.base.SizeBoxOrtho(loaded_elements=buildings_shells, min_flag=True,  max_length_surface=12,max_length_volume=12)
     #ortho_sb = ansa.base.SizeBoxOrtho(loaded_elements=buildings_shells, directions=arg2,  max_length_surface=10,max_length_volume=16)
     #base.SizeBoxSplitProject(buildings_sb, ortho_sb)
     ## Campus
@@ -367,8 +382,8 @@ def main():
     print(min_coords, max_coords)
     abl_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 30, 40)
     ## Close ground
-    min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
-    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),z_max+avg_height]
+    min_coords = [x_min-(xn_factor*avg_height),y_min- (yn_factor*avg_height),z_min]
+    max_coords = [x_max+(xp_factor*avg_height),y_max +(yp_factor*avg_height),z_max+avg_height]
     close_ground_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 85, 85)
     ## Wake 1 (10h)
     min_coords = [x_max - avg_height,y_min,z_min]
@@ -380,10 +395,10 @@ def main():
     wake2_sb = base.SizeBoxMinMax(None, min_coords, max_coords, 60, 80)
     
     # Save Size Boxes to a list
-    sbs = [abl_sb, close_ground_sb, wake1_sb, wake2_sb, buildings_sb]
+    sbs = [abl_sb, close_ground_sb, wake1_sb, wake2_sb,buildings_sb]
     
     #Uses STL algorith to recover exact geometry
-    mesh.AspacingSTL('1%', 50, 30.0, 0.001)
+    mesh.AspacingSTL('1%', 50, 30.0, 0.00001)
     #mesh.AspacingSTL("5%", 50.0, 30.0, 0.2)
     print("STL spacing\n")
     base.SetANSAdefaultsValues({'element_type':'quad'})
@@ -397,7 +412,7 @@ def main():
     print("Elements released from faces\n")
     
     # Describe the solid
-    mesh.IntersectSolidDescription(0, fuse_distance = 0.5, improve_mesh_quality=False)
+    mesh.IntersectSolidDescription(0, fuse_distance = 0.1, improve_mesh_quality=False)
     print("Solid description of the buildings done\n")
     
     # Create surface geometry
@@ -496,8 +511,8 @@ def main():
     base.All()
     # Project abl size box to sides
     ## Close ground
-    min_coords = [x_min-(20*avg_height),y_min- (30*avg_height),z_min]
-    max_coords = [x_max+(40*avg_height),y_max +(30*avg_height),70]
+    min_coords = [x_min-(xn_factor*avg_height),y_min- (yn_factor*avg_height),z_min]
+    max_coords = [x_max+(xp_factor*avg_height),y_max +(yp_factor*avg_height),70]
     # Create Morph box for project
     morph.MorphMinMax(None, min_coords, max_coords)
     m1 = base.CollectEntities(deck, None, "MORPHEDGE")
@@ -517,42 +532,22 @@ def main():
     arg3 = {}
     arg3['Normal'] = (0.0, 0.0, 0.0, )
     cons = base.ConsProject(entities=morph_perimeters, faces_array=in_out_faces, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
-    ##############33
-    buildings = base.GetEntity(deck, "SHELL_PROPERTY", 1)
-    #Morph box to project to ground
-    morph.MorphOrtho(loaded_elements=buildings, min_flag=True)
-    m1 = base.CollectEntities(deck, None, "MORPHFACE")
-    
-    morph.MorphOffset(m1, 10,0)
-    edges = base.CollectEntities(deck, m1, "MORPHEDGE")
-    # Converto morph box to curve
-    morph_perimeters2 = morph.MorphConvert("MorphEdgesToCurve", edges, {"delete_original": True})
-    m1 = base.CollectEntities(deck, None, "MORPHBOX")
-    morph.MorphBoxDel(m1)
-    # Get ground face to project
-    ground_face = base.GetEntity(constants.NASTRAN, "PSHELL", 10)
-    search_type = ("FACE",)
-    groundbuilding_face = base.CollectEntities(constants.NASTRAN, [ground_face], search_type,recursive=False)
-    # Cons project
-    arg3 = {}
-    arg3['Normal'] = (0.0, 0.0, 0.0, )
-    cons = base.ConsProject(entities=morph_perimeters2, faces_array=groundbuilding_face, project_type=arg3, min_length=20.0, split_original=True, paste_sides=True, paste=True)
-
 
     # Save domain dimensions, append if exists
     domain_file = open(target_path + "domain_dimensions.txt", "w")
-    domain_file.write(f"avg_h = {avg_height}\n")
-    domain_file.write(f"x_min: {x_min - xn}\n")
-    domain_file.write(f"x_max: {x_max + xp}\n")
-    domain_file.write(f"y_min: {y_min - yn}\n")
-    domain_file.write(f"y_max: {y_max + yp}\n")
-    domain_file.write(f"z_min: {z_min - 0.5*avg_height}\n")
-    domain_file.write(f"z_max: {z_max + zp}\n")
-    domain_file.write(f"x_length: {x_length_domain}\n")
-    domain_file.write(f"y_length: {y_length_domain}\n")
-    domain_file.write(f"z_length: {z_length_domain}\n")
-    domain_file.write(f"Number in x: {x_length_domain/12}\n")
-    domain_file.write(f"Number in y: {y_length_domain/12}\n")
+    domain_file.write(f"avg_h={avg_height}\n")
+    domain_file.write(f"x_min={x_min - xn}\n")
+    domain_file.write(f"x_max={x_max + xp}\n")
+    domain_file.write(f"y_min={y_min - yn}\n")
+    domain_file.write(f"y_max={y_max + yp}\n")
+    domain_file.write(f"z_min={z_min - 0.5*avg_height}\n")
+    domain_file.write(f"z_max={z_max + zp}\n")
+    domain_file.write(f"x_length={x_length_domain}\n")
+    domain_file.write(f"y_length={y_length_domain}\n")
+    domain_file.write(f"z_length={z_length_domain}\n")
+    domain_file.write(f"precursor_length={math.ceil(z_length_domain*6)}\n")
+    domain_file.write(f"n_x={x_length_domain/12}\n")
+    domain_file.write(f"n_y={y_length_domain/12}\n")
 
     domain_file.close()
     
@@ -564,8 +559,8 @@ def main():
     ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
     
     # Save
-    base.SaveAs(target_path+input_file+".ansa")
-    print (input_file, "saved\n")    
+    # base.SaveAs(target_path+input_file+".ansa")
+    # print (input_file, "saved\n")    
     
     bottom_ents = []
     base.All()
@@ -624,14 +619,22 @@ def main():
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
-    
-    batchmesh.DistributeAllItemsToScenarios()
 
     # Change geo file with y_length
+    geo_target_path = target_path + "MN5/" + input_file + ".geo"
     if os.path.exists(target_path+input_file+".geo"):
-        generate_geo(target_path+input_file+".geo", input_file, y_length_domain)
+        generate_geo(target_path+input_file+".geo",geo_target_path, input_file, y_length_domain, prec_length=math.ceil(z_length_domain*6))
     else:
         print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
+        
+    # # Move witness.txt to MN5 folder
+    # witness_src = target_path + "witness.txt"
+    # witness_dst = target_path + "MN5/witness.txt"
+    # if os.path.exists(witness_src):
+    #     shutil.copy(witness_src, witness_dst)
+    #     print("witness.txt moved to MN5 folder.")
+    # else:
+    #     print("witness.txt not found, skipping move.")
 
     # Save
     base.SaveAs(target_path+input_file+".ansa")

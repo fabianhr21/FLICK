@@ -1,7 +1,7 @@
 #!/bin/bash
 ## Code to loop over a desired directory and apply clipnbuildings
 DIR="/home/fabianh/ANSA/CASES_MESHES/"
-CITIES=("BARCELONA") # "MADRID" "VALENCIA" "SEVILLA" "ZARAGOZA")
+CITIES=("MADRID" "BARCELONA" "VALENCIA" "SEVILLA" "ZARAGOZA")
 CITY4CFD="/home/fabianh/City4CFD/build/"
 ansa_path=/apps/ANSA/24.1.2/ansa_v24.1.2/ansa64.sh
 scripts_final="/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
@@ -20,13 +20,13 @@ for city in "${CITIES[@]}"; do
         BASENAME=$(basename "$f")
 
         # Run clipnbuildings
-        python clipnbuildings_run.py -id "$f" -r $RADIUS -o "$f" --output_filename "$BASENAME"
+        # python clipnbuildings_run.py -id "$f" -r $RADIUS -o "$f" --output_filename "$BASENAME"
 
         # Run City4CFD
-        $CITY4CFD/city4cfd "$f/output/config.json" --output_dir "$f/output/"
+        # $CITY4CFD/city4cfd "$f/output/config.json" --output_dir "$f/output/"
 
         # Get average height / domain dimensions
-        python generate_witness.py -stl "$f/output/${BASENAME}_Buildings.stl" -p "$f/output/"
+        python generate_witness.py -stl "$f/output/${BASENAME}_Buildings.stl" -p "$f/output/" -o "$f/output/"
 
         buildings_file="${f}output/${BASENAME}_Buildings.stl"
         echo "  Using buildings file: $buildings_file"

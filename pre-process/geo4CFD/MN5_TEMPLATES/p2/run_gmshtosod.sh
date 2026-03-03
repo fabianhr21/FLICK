@@ -29,3 +29,4 @@ module load openmpi/4.1.5-gcc ucx/1.15.0-gcc hdf5/1.14.1-2-gcc-openmpi
 # Do not forget to change your script
 # use as many tasks per node in mpirun as gpu to target
 mpirun -n 4 tool_meshConversorPar input_file.dat
+sbatch run.sh

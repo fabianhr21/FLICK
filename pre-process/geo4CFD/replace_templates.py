@@ -75,7 +75,7 @@ def build_replacements(basename, dims):
     """
     return {
         '{{BASENAME}}':    basename,
-        '{{LZ}}':          dims['z_length'],
+        '"{{LZ}}"':          dims['z_length'],
         '{{y_length}}':    dims['y_length'],
         '{{prec_length}}': dims['precursor_length'],
     }
