@@ -9,9 +9,9 @@ import sys
 import math
 
 deck = constants.OPENFOAM
-case = "264-44"
-city = "BARCELONA/"
-output_path = "/home/fabianh/ANSA/CASES_MESHES/" + city + case + "/output/"
+case = "388-714"
+city = "ZARAGOZA/"
+output_path = "/home/fabianh/GEO_CASES/" + city + case + "/output/"
 output_name = case +"_Buildings"
 # distance = -3200 # Precursor length spanwise
 

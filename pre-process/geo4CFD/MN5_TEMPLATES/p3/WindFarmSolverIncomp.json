@@ -31,7 +31,7 @@
 
    "initial_avgTime": 1000.0,
 
-   "saveSurfaceResults":false,
+   "saveSurfaceResults":true,
 
    "flag_les":1,
    "maxIter":20,

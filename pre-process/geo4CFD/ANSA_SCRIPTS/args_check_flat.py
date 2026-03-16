@@ -619,6 +619,7 @@ def main(input_file_dir, working_directory,input_path, target_path):
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
+    mesh.ReadQualityCriteria(working_directoy + "mesh.ansa_qual")
 
     # Change geo file with y_length
     geo_target_path = target_path + "MN5/" + input_file + ".geo"

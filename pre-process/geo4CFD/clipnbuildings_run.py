@@ -14,7 +14,7 @@ import sys
 import argparse
 import subprocess
 import osmnx as ox
-from pyproj import CRS
+from pyproj import CRS, Transformer
 import geopandas as gpd
 from shapely.geometry import shape, Point, box
 from shapely.ops import unary_union
@@ -139,37 +139,72 @@ def get_laz_crs(laz_path):
 def merge_laz_files(input_directory, output_laz):
     """
     Merge all LAZ files in the input directory into a single output LAZ file.
+    If files have different CRS, reprojects all to the most common CRS before merging.
     """
-    # Erase output file if it exists
     if os.path.exists(output_laz):
         os.remove(output_laz)
 
-    laz_files = [os.path.join(input_directory, f) for f in os.listdir(input_directory) 
-                 if (f.endswith('.laz') or f.endswith('.las'))] # and not ('.copc' in f)] 
-    
+    laz_files = [os.path.join(input_directory, f) for f in os.listdir(input_directory)
+                 if (f.endswith('.laz') or f.endswith('.las')) and not f.endswith('.copc.las') and not f.endswith('.copc.laz')] 
+
     if not laz_files:
         raise ValueError("No LAZ files found in the input directory.")
-    
-    pipeline_steps = (
-        [{"type": "readers.las", "filename": f} for f in laz_files]
-        + [{"type": "filters.merge"}]
-        + [{
-            "type": "writers.las",
-            "filename": output_laz
-        }]
-    )
 
-    pipeline = pdal.Pipeline(json.dumps(pipeline_steps))
+    # Detect CRS of each file
+    file_epsg = {}
+    for f in laz_files:
+        try:
+            file_epsg[f] = get_laz_crs(f)
+        except ValueError:
+            file_epsg[f] = None
+
+    valid_epsgs = [e for e in file_epsg.values() if e is not None]
+    if not valid_epsgs:
+        raise ValueError("No CRS found in any LAZ file.")
+
+    # Use the most common EPSG as the merge target
+    target_epsg = max(set(valid_epsgs), key=valid_epsgs.count)
+    target_srs = f"EPSG:{target_epsg}"
+    unique_crs = set(valid_epsgs)
+
+    if len(unique_crs) > 1:
+        print(f"CRS mismatch detected: {unique_crs}. Reprojecting all files to {target_srs} before merging.")
+        # Build a tagged PDAL pipeline so each reader can be reprojected independently
+        stages = []
+        merge_inputs = []
+        for i, f in enumerate(laz_files):
+            reader_tag = f"reader_{i}"
+            stages.append({"type": "readers.las", "filename": f, "tag": reader_tag})
+            if file_epsg.get(f) != target_epsg:
+                reproj_tag = f"reproj_{i}"
+                stages.append({
+                    "type": "filters.reprojection",
+                    "out_srs": target_srs,
+                    "inputs": [reader_tag],
+                    "tag": reproj_tag
+                })
+                merge_inputs.append(reproj_tag)
+            else:
+                merge_inputs.append(reader_tag)
+        stages.append({"type": "filters.merge", "inputs": merge_inputs})
+        stages.append({"type": "writers.las", "filename": output_laz})
+        pipeline = pdal.Pipeline(json.dumps({"pipeline": stages}))
+    else:
+        pipeline_steps = (
+            [{"type": "readers.las", "filename": f} for f in laz_files]
+            + [{"type": "filters.merge"}]
+            + [{"type": "writers.las", "filename": output_laz}]
+        )
+        pipeline = pdal.Pipeline(json.dumps(pipeline_steps))
+
     count = pipeline.execute()
-
     print(f"Merged {len(laz_files)} files -> {output_laz} ({count:,} points)")
-    
+
     # Cleanup copc files
     for f in laz_files:
-        copc_file = f + ".copc.las" # Standard pdal naming often appends
-        if f.endswith('.copc.las'): 
-             os.remove(f)
-    
+        if f.endswith('.copc.las'):
+            os.remove(f)
+
     return output_laz
 
 def load_area_extent_geojson(geojson_path, target_crs):
@@ -309,7 +344,7 @@ def separate_laz_file(input_laz, output_dir=None):
     return ground_laz, building_laz
 
 def main():
-    DEFAULT_CRS = 'EPSG:6369'
+    DEFAULT_CRS = 'EPSG:25830'
 
     parser = argparse.ArgumentParser(description="Clip LAZ and fetch OSM buildings in same CRS")
     parser.add_argument('--input','-i', help="Input LAZ file")
@@ -319,6 +354,7 @@ def main():
     parser.add_argument('--radius', '-r',type=float, help="Radius for circular clipping (map units of target CRS)")
     parser.add_argument('--bbox_bounding', type=float, default=750, help="Bounding box size for radius mode (default: 750)")
     parser.add_argument('--center', nargs=2, type=float, metavar=('x','y'), help="Center for circular clipping (in target CRS)")
+    parser.add_argument('--center_latlon', type=str, help="Center in EPSG:4326 (lat, lon). Will be transformed to the LAZ CRS.")
     parser.add_argument('--crs', help=f"CRS for LAZ, defaults to header or {DEFAULT_CRS}")
     parser.add_argument('--output_dir','-o', required=True, help="Output directory")
     parser.add_argument('--output_filename', default='clipped', help="Output filename prefix")
@@ -327,8 +363,8 @@ def main():
     if not args.input and not args.input_dir:
         parser.error('Specify --input or --input_dir')
 
-    if not (args.bbox or args.area_geojson or args.radius):
-        parser.error('Specify --bbox, --area_geojson, or --radius')
+    if not (args.bbox_bounding or args.area_geojson or args.radius):
+        parser.error('Specify --bbox_bounding, --area_geojson, or --radius')
 
     # Create output directory
     os.makedirs(args.output_dir + '/output', exist_ok=True)
@@ -353,12 +389,19 @@ def main():
             sys.stderr.write(f"Warning: using default CRS {DEFAULT_CRS}\n")
     print(f"LAZ CRS: {laz_crs}")
 
+    # Transform center_latlon (EPSG:4326) to LAZ CRS if provided
+    if args.center_latlon:
+        lat, lon = map(float, args.center_latlon.split(','))
+        transformer = Transformer.from_crs("EPSG:4326", laz_crs, always_xy=False)
+        cx, cy = transformer.transform(lat, lon)
+        args.center = [cx, cy]
+        print(f"Transformed center ({lat}, {lon}) EPSG:4326 -> ({cx:.2f}, {cy:.2f}) {laz_crs}")
     # Determine bounds and optional circle
     circle = None
     circle_wkt = None
 
     # Set bbox to be a 1500 side square around center if radius mode and no bbox provided
-    if args.radius and not args.bbox:
+    if args.bbox_bounding and not args.bbox:
         if args.center:
             center = tuple(args.center)
         else:
