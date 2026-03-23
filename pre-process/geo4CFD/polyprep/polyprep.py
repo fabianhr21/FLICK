@@ -112,6 +112,14 @@ import json
 from shapely.geometry import shape, mapping, Polygon, MultiPolygon
 from shapely.ops import unary_union
 
+
+def _chunked_union(geoms, chunk_size=500):
+    """Tree-reduce a list of geometries to keep peak RAM bounded."""
+    while len(geoms) > chunk_size:
+        chunks = [geoms[i:i + chunk_size] for i in range(0, len(geoms), chunk_size)]
+        geoms = [unary_union(chunk) for chunk in chunks]
+    return unary_union(geoms)
+
 def process_polygons(input_filename, output_filename, buffer_size, apply_convex_hull=False, remove_holes=0, simplification_tol=0.):
     # 1. Leer crs original del GeoJSON
     with open(input_filename, 'r') as f:
@@ -150,7 +158,7 @@ def process_polygons(input_filename, output_filename, buffer_size, apply_convex_
         buffered_polygons = close_holes_in_polygons(buffered_polygons)
 
     print("Dissolving polygons...")
-    dissolved_polygons = unary_union(buffered_polygons).buffer(-buffer_size, buffer_size, cap_style=3, join_style=1)
+    dissolved_polygons = _chunked_union(buffered_polygons).buffer(-buffer_size, buffer_size, cap_style=3, join_style=1)
 
     if remove_holes == 2:
         if isinstance(dissolved_polygons, MultiPolygon):

@@ -7,12 +7,14 @@ import CreateDomain
 import IsolateNormalVector
 import sys
 import math
+import os
 
 deck = constants.OPENFOAM
-case = "388-714"
-city = "ZARAGOZA/"
-output_path = "/home/fabianh/GEO_CASES/" + city + case + "/output/"
+case = "28-229"
+city = "MADRID/"
+output_path = "/home/fabianh/GEO_CASES/round_2/" + city + case + "/output/"
 output_name = case +"_Buildings"
+mn5_geo_path = "/home/fabianh/GEO_CASES/round_2/" + city + case + "/output/MN5/" + case + "_Buildings.geo"
 # distance = -3200 # Precursor length spanwise
 
 def splitTOhexa():
@@ -218,6 +220,8 @@ def main():
         version="v3.2.0",
         bc_correspondence="yes"
     )
+	#Output GEO
+	os.system(f"gmsh {mn5_geo_path} -save ")
 
 
 if __name__ == '__main__':

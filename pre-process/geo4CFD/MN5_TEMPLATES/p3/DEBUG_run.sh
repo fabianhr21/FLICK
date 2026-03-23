@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### Job name on queue
-#SBATCH --job-name=p2_{{BASENAME}}
+#SBATCH --job-name=p3_{{BASENAME}}
 
 ### Output and error files directory
 #SBATCH -D .
@@ -12,12 +12,13 @@
 
 ### Run configuration
 ### Rule: {ntasks-per-node} \times {cpus-per-task} = 80
-#SBATCH --nodes=1
-#SBATCH --ntasks=4
+#SBATCH --nodes=3
+#SBATCH --ntasks=12
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=20
-#SBATCH --time=48:00:00
+#SBATCH --time=02:00:00
 #SBATCH --gres=gpu:4
+#SBATCH --exclusive
 
 ### Queue and account
 #SBATCH --qos=acc_resa
@@ -27,5 +28,5 @@
 module purge
 module load nvidia-hpc-sdk/24.3 hdf5/1.14.1-2-nvidia-nvhpcx
 
-mpirun -np 4 --map-by ppr:4:node:PE=20 --report-bindings ./mn5_bind.sh  ./sod2d WindFarmSolverIncomp
+mpirun -np 12 --map-by ppr:4:node:PE=20 --report-bindings ./mn5_bind.sh  ./sod2d DEBUG_WindFarmSolverIncomp
 # --report-bindings ./mn5_bind.sh 

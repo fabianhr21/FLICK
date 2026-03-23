@@ -9,13 +9,15 @@ import sys
 import math
 import argparse
 import sys
+import shutil
+from ansa import batchmesh
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
-file_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/654-317/output/"
-input_file = "654-317_Buildings"
-target_path = "/home/fabianh/ANSA/CASES_MESHES/MADRID/654-317/output/"
+params = "/home/fabianh/FLICK_untouched/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
+working_directory = "/home/fabianh/FLICK_untouched/pre-process/geo4CFD/ANSA_SCRIPTS/"
+file_path = "/home/fabianh/GEO_CASES/round_2/BARCELONA/3-34/output/"
+input_file = "3-34_Buildings"
+target_path = "/home/fabianh/GEO_CASES/round_2/BARCELONA/3-34/output/"
 
 
 def generate_geo(geo_script, target_geo, input_file,y_length,prec_length):
@@ -276,6 +278,16 @@ def _main_core(iso_ent, status, user_val, cog_val):
 		else:
 			return None
 
+def merge_pids(deck,src_pid_list,tgt_pid_list):
+	for src_pid, tgt_pid in zip(src_pid_list, tgt_pid_list):
+		src = base.GetEntity(deck, "SHELL_PROPERTY", src_pid)
+		faces = base.CollectEntities(deck, src, "FACE")
+		shells = base.CollectEntities(deck, src, "SHELL")
+		for face in faces:
+			base.SetEntityCardValues(deck, face, {'PID':tgt_pid})
+		for shell in shells:
+			base.SetEntityCardValues(deck, shell, {'PID':tgt_pid})	
+		base.DeleteEntity(src, True)
 
 def main():
 
@@ -319,6 +331,7 @@ def main():
     height = z_max - z_min
     print("Max building height:", height)
     avg_height = height
+    max_height = height
 
     # Read avg_height from domain_dimensions.txt
     domain_file_path = target_path + "domain_dimensions.txt"
@@ -535,6 +548,7 @@ def main():
 
     # Save domain dimensions, append if exists
     domain_file = open(target_path + "domain_dimensions.txt", "w")
+    domain_file.write(f"max_height={max_height}\n")
     domain_file.write(f"avg_h={avg_height}\n")
     domain_file.write(f"x_min={x_min - xn}\n")
     domain_file.write(f"x_max={x_max + xp}\n")
@@ -554,9 +568,6 @@ def main():
     if errors != None:
         base.CreateEntity(deck, "SHELL_PROPERTY", {"Name": "ERRORS"})
 
-
-    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
-    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
     
     # Save
     # base.SaveAs(target_path+input_file+".ansa")
@@ -619,6 +630,23 @@ def main():
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
+    mesh.ReadQualityCriteria(working_directory + "mesh.ansa_qual")
+    
+    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
+    
+    batchmesh.DistributeAllItemsToScenarios()
+    scenario = base.NameToEnts("Meshing_Scenario")
+    status = batchmesh.RunAllMeshingScenarios(ret_ents=True)
+    merge_pids(deck,[11,12,13,14,15],[1,7,5,2,3])
+    
+    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
+    mesh.VolumesDetect(1,whole_db=True)
+    scenario = base.NameToEnts("Volume_Scenario")
+    print(scenario)
+    volume_scenario = batchmesh.GetSessionsFromMeshingScenario(scenario[0],ret_ents=True)
+    print(volume_scenario)
+    status = batchmesh.RunMeshingScenario(volume_scenario[0])
+
 
     # Change geo file with y_length
     geo_target_path = target_path + "MN5/" + input_file + ".geo"
@@ -627,18 +655,28 @@ def main():
     else:
         print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
         
-    # # Move witness.txt to MN5 folder
-    # witness_src = target_path + "witness.txt"
-    # witness_dst = target_path + "MN5/witness.txt"
-    # if os.path.exists(witness_src):
-    #     shutil.copy(witness_src, witness_dst)
-    #     print("witness.txt moved to MN5 folder.")
-    # else:
-    #     print("witness.txt not found, skipping move.")
+    # Move witness.txt to MN5 folder
+    witness_src = target_path + "witness.txt"
+    witness_dst = target_path + "MN5/witness.txt"
+    stl_src = target_path + input_file + ".stl"
+    stl_dst = target_path + "MN5/" + input_file + ".stl"
+    if os.path.exists(stl_src):
+        shutil.copy(stl_src, stl_dst)
+        print(f"{input_file}.stl moved to MN5 folder.")
+    else:
+          print(f"{input_file}.stl not found, skipping move.")
+    if os.path.exists(witness_src):
+        shutil.copy(witness_src, witness_dst)
+        print("witness.txt moved to MN5 folder.")
+    else:
+        print("witness.txt not found, skipping move.")
+    
+
 
     # Save
     base.SaveAs(target_path+input_file+".ansa")
     print (input_file, "saved\n")    
+
 
 if __name__ == '__main__':
     main()

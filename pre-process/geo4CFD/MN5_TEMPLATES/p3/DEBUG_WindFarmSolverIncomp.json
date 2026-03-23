@@ -24,12 +24,12 @@
    "save_restartFile_first":1,
    "save_restartFile_step":1000,
 
-   "loadRestartFile":true,
+   "loadRestartFile":false,
    "restartFile_to_load":2,
 
    "continue_oldLogs":false,
 
-   "saveAvgFile":true,
+   "saveAvgFile":false,
    "loadAvgFile":false,
 
    "initial_avgTime": 1000.0,

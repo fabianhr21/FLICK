@@ -9,7 +9,7 @@
 ## Rule: --gres=gpu:{ntasks}
 #SBATCH --nodes=1
 #SBATCH --ntasks=112
-#SBATCH --qos=gp_debug
+#SBATCH --qos=gp_bsccase
 #SBATCH -A bsc21
 
 ### MN% modules

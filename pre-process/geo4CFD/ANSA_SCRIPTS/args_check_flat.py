@@ -10,6 +10,7 @@ import math
 import argparse
 import sys
 import shutil
+from ansa import batchmesh
 
 deck = constants.OPENFOAM
 params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
@@ -273,6 +274,17 @@ def _main_core(iso_ent, status, user_val, cog_val):
 			return collected
 		else:
 			return None
+
+def merge_pids(deck,src_pid_list,tgt_pid_list):
+	for src_pid, tgt_pid in zip(src_pid_list, tgt_pid_list):
+		src = base.GetEntity(deck, "SHELL_PROPERTY", src_pid)
+		faces = base.CollectEntities(deck, src, "FACE")
+		shells = base.CollectEntities(deck, src, "SHELL")
+		for face in faces:
+			base.SetEntityCardValues(deck, face, {'PID':tgt_pid})
+		for shell in shells:
+			base.SetEntityCardValues(deck, shell, {'PID':tgt_pid})	
+		base.DeleteEntity(src, True)
 
 def main(input_file_dir, working_directory,input_path, target_path):
 
@@ -619,8 +631,22 @@ def main(input_file_dir, working_directory,input_path, target_path):
     
     mesh.ReadMeshParams(params)
     mesh.CreateFreeMesh()
-    mesh.ReadQualityCriteria(working_directoy + "mesh.ansa_qual")
-
+    mesh.ReadQualityCriteria(working_directory + "mesh.ansa_qual")
+    
+    ansa.connections.ReadAssemblyScenario(working_directory + "Meshing_Scenario.ansa")
+    
+    batchmesh.DistributeAllItemsToScenarios()
+    scenario = base.NameToEnts("Meshing_Scenario")
+    status = batchmesh.RunAllMeshingScenarios(ret_ents=True)
+    merge_pids(deck,[11,12,13,14,15],[1,7,5,2,3])
+    
+    ansa.connections.ReadAssemblyScenario(working_directory + "Volume_Scenario.ansa")
+    mesh.VolumesDetect(1,whole_db=True)
+    scenario = base.NameToEnts("Volume_Scenario")
+    print(scenario)
+    volume_scenario = batchmesh.GetSessionsFromMeshingScenario(scenario[0],ret_ents=True)
+    print(volume_scenario)
+    status = batchmesh.RunMeshingScenario(volume_scenario[0])
     # Change geo file with y_length
     geo_target_path = target_path + "MN5/" + input_file + ".geo"
     if os.path.exists(target_path+input_file+".geo"):
@@ -628,14 +654,21 @@ def main(input_file_dir, working_directory,input_path, target_path):
     else:
         print("Geo file not found, skipping modification. ### MANUALLY CHANGE y_length IN THE GEO FILE. ###")
         
-    # # Move witness.txt to MN5 folder
-    # witness_src = target_path + "witness.txt"
-    # witness_dst = target_path + "MN5/witness.txt"
-    # if os.path.exists(witness_src):
-    #     shutil.copy(witness_src, witness_dst)
-    #     print("witness.txt moved to MN5 folder.")
-    # else:
-    #     print("witness.txt not found, skipping move.")
+    # Move witness.txt to MN5 folder
+    witness_src = target_path + "witness.txt"
+    witness_dst = target_path + "MN5/witness.txt"
+    stl_src = target_path + input_file + ".stl"
+    stl_dst = target_path + "MN5/" + input_file + ".stl"
+    if os.path.exists(stl_src):
+        shutil.copy(stl_src, stl_dst)
+        print(f"{input_file}.stl moved to MN5 folder.")
+    else:
+          print(f"{input_file}.stl not found, skipping move.")
+    if os.path.exists(witness_src):
+        shutil.copy(witness_src, witness_dst)
+        print("witness.txt moved to MN5 folder.")
+    else:
+        print("witness.txt not found, skipping move.")
 
     # Save
     base.SaveAs(target_path+input_file+".ansa")

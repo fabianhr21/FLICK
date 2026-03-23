@@ -111,8 +111,8 @@ def analyze_buildings(stl_file_path, path):
 
 def generate_witness_points(stl_file_path, path):
     pedestrian_level = 1.5
-    witness_total = 50
-    witness_pedestrian = 10
+    witness_total = 500
+    witness_pedestrian = 100
 
     full_mesh = trimesh.load(stl_file_path, force='mesh')
     buildings = full_mesh.split(only_watertight=False)
