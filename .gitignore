@@ -5,6 +5,7 @@ Wind-NN/output/
 wind-nn/output/
 Post-Process/final_output/
 post-process/final_output/
+webapp/jobs/
 
 # Python cache directories
 __pycache__/

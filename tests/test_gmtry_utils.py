@@ -39,7 +39,7 @@ def gm():
     return module
 
 def test_rotation_matrix_identity(gm):
-    R = gm.rotation_matrix_around_z(270)
+    R = gm.rotation_matrix_around_z(0)
     assert np.allclose(R, np.eye(3))
 
 def test_calculate_bounding_box(gm):

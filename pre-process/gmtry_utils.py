@@ -342,19 +342,10 @@ def compute_bounding_box_center(stl_mesh):
 
 def rotation_matrix_around_z(theta_deg, convention="dataset"):
     """
-    Return 3x3 rotation matrix.
-    - convention="dataset": dataset angles where + is clockwise and 0 = up (+Y).
-      Implemented by converting to math CCW angle internally.
-    - convention="math": standard math angles (CCW, 0 = +X).
+    Return 3x3 CCW rotation matrix around Z for the given angle in degrees.
+    The convention parameter is accepted for compatibility but has no effect.
     """
-    if convention == "dataset":
-        # convert dataset angle (0=+Y, +CW) to math CCW angle
-        # math_theta = 90 - theta_deg  is equivalent to negation + offset;
-        # either is fine; here we use negation to treat +theta as clockwise.
-        theta_rad = np.radians(theta_deg)
-    else:
-        theta_rad = np.radians(theta_deg)
-
+    theta_rad = np.radians(theta_deg)
     c = np.cos(theta_rad)
     s = np.sin(theta_rad)
     R = np.array([[c, -s, 0.0],

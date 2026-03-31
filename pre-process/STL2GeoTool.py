@@ -21,8 +21,8 @@ mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
 # Folders & files
-STL_DIR = './'
-STL_BASENAME = 'bcn_2200'
+STL_DIR = '../'
+STL_BASENAME = 'grid_of_cubes'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0

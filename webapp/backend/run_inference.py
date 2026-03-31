@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 """
 Standalone inference script for the FLICK webapp.
-Runs UNet_wind on all -geodata.h5 files in a preprocessed directory
-and writes <basename>-<idx>-UMAG.csv to the output directory.
+Runs Generator2D (GAN-based model) on all -geodata.h5 files in a preprocessed directory
+and writes <basename>-<idx>-UGT.csv, <basename>-<idx>-VGT.csv, and <basename>-<idx>-UMAG.csv
+to the output directory.
 
 Usage:
     python run_inference.py \
@@ -11,7 +12,8 @@ Usage:
         --model_path /path/to/weights/ \
         --model_basename model \
         --output_dir /path/to/infer_output/ \
-        --n_points 256
+        --n_points 256 \
+        --num_res_blocks 32
 """
 import argparse
 import glob
@@ -24,6 +26,7 @@ import torch
 
 INPUT_FEAT = ['MASK', 'HEGT', 'WDST']
 SCALING_X = 120.0
+SCALING_Y = 16.0
 
 
 def get_args():
@@ -37,9 +40,11 @@ def get_args():
     p.add_argument('--model_basename', default='model',
                    help='Weights file stem (without .pt extension)')
     p.add_argument('--output_dir', required=True,
-                   help='Where to write UMAG CSV files')
+                   help='Where to write output CSV files (UGT, VGT, UMAG)')
     p.add_argument('--n_points', type=int, default=256,
                    help='Grid dimension (must match trained model, default 256)')
+    p.add_argument('--num_res_blocks', type=int, default=32,
+                   help='Number of residual blocks in the generator model')
     return p.parse_args()
 
 
@@ -61,13 +66,13 @@ def main():
     args = get_args()
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Add wind-nn/ to sys.path so UNet_wind can be imported
+    # Add wind-nn/ to sys.path so Generator2D can be imported
     repo_root = os.path.abspath(
         os.path.join(os.path.dirname(__file__), '..', '..'))
     sys.path.insert(0, os.path.join(repo_root, 'wind-nn'))
-    from Unet_model import UNet_wind  # noqa: E402 (local import after path setup)
+    from Models import Generator2D  # noqa: E402 (local import after path setup)
 
-    class ModelArgs:  # minimal namespace expected by UNet_wind.__init__
+    class ModelArgs:  # minimal namespace expected by Generator2D.__init__
         x_features = INPUT_FEAT
         y_features = ['U', 'V']
         e_features = []
@@ -75,8 +80,11 @@ def main():
         input_ydim = args.n_points
         target_xdim = args.n_points
         target_ydim = args.n_points
+        spacing_x = 1.0
+        spacing_y = 1.0
         scaling_x = SCALING_X
-        scaling_y = 16.0
+        scaling_y = SCALING_Y
+        num_res_blocks = args.num_res_blocks
         verbose = 0
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -87,11 +95,11 @@ def main():
         print(f'[inference] ERROR: weights not found at {model_file}')
         sys.exit(1)
 
-    model = UNet_wind(ModelArgs())
+    model = Generator2D(ModelArgs())
     checkpoint = torch.load(model_file, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model = model.float().eval().to(device)
-    print(f'[inference] model loaded from {model_file}')
+    print(f'[inference] Generator2D model loaded from {model_file}')
 
     pattern = os.path.join(args.preprocess_dir, f'{args.basename}-*-geodata.h5')
     h5_files = sorted(glob.glob(pattern))
@@ -109,17 +117,28 @@ def main():
             ypred = model(x.float())
 
         mask = (x[0][0] >= 1.0).cpu().numpy()
-        Ux = ypred[0][0].cpu().numpy() * mask
-        Uy = ypred[0][1].cpu().numpy() * mask
-        umag = np.sqrt(Ux ** 2 + Uy ** 2)
+        Ux_masked = ypred[0][0].cpu().numpy() * mask
+        Uy_masked = ypred[0][1].cpu().numpy() * mask
+        umag = np.sqrt(Ux_masked ** 2 + Uy_masked ** 2)
 
         prefix = f'{args.basename}-{idx_str}'
+        # Save all three outputs: UGT, VGT, UMAG
+        np.savetxt(
+            os.path.join(args.output_dir, f'{prefix}-UGT.csv'),
+            Ux_masked,
+            delimiter=',',
+        )
+        np.savetxt(
+            os.path.join(args.output_dir, f'{prefix}-VGT.csv'),
+            Uy_masked,
+            delimiter=',',
+        )
         np.savetxt(
             os.path.join(args.output_dir, f'{prefix}-UMAG.csv'),
             umag,
             delimiter=',',
         )
-        print(f'[inference] saved {prefix}-UMAG.csv')
+        print(f'[inference] saved {prefix}-UGT.csv, {prefix}-VGT.csv, {prefix}-UMAG.csv')
 
 
 if __name__ == '__main__':

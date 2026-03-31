@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import numpy as np
 
 from . import config
 from . import coord_utils
@@ -23,13 +24,10 @@ _SUBPROCESS_TIMEOUT = 600  # seconds; kill if a stage hangs longer than this
 
 # Environment passed to every subprocess:
 #   MPLBACKEND=Agg  → no X11 display needed
-#   CUDA_VISIBLE_DEVICES=-1 → cupy/torch see no GPU and fail fast instead of hanging
 _SUBPROCESS_ENV = {
     **os.environ,
     'MPLBACKEND': 'Agg',
-    'CUDA_VISIBLE_DEVICES': '-1',
 }
-
 
 def _run(cmd: list, log_path: str) -> int:
     """Run a subprocess, streaming stdout+stderr to log_path in real time.
@@ -66,18 +64,23 @@ def _run(cmd: list, log_path: str) -> int:
     return proc.returncode
 
 
-def run_pipeline(job_id: str, stl_path: str, wind_angle: float) -> None:
+def run_pipeline(job_id: str, stl_path: str, wind_angle: float,
+                 user_px_resolution: float | None = None,
+                 ref_height: float = 10.0,
+                 ref_velocity: float = 1.0) -> None:
     """
     Full pre-process → inference pipeline for one (STL, wind_angle) pair.
 
-    Directory layout created under JOBS_DIR/{job_id}/:
-        input.stl             – original uploaded STL (pre-existing)
-        pipeline.log          – combined stdout/stderr from subprocesses
-        preprocess_output/    – STL2GeoTool HDF5 output
-        infer_output/         – UMAG CSV files from inference
-        heatmap.png           – jet colourmap PNG for the frontend
-        results.json          – metadata consumed by the frontend
-        status.json           – {status, progress_msg} polled by frontend
+    user_px_resolution: metres per pixel requested by the user.
+        None  → auto: defaults to a px_resolution that yields 256 grid points.
+        float → cell size is fixed at this value; N_POINTS is derived.
+
+    ref_height:   height (m) at which the wind field is evaluated (heatmap Z).
+    ref_velocity: reference wind speed (m/s) at ref_height.  The NN outputs
+                  normalised velocities; they are scaled by this value.
+
+    The domain (step_size) always covers the full STL geometry at any
+    rotation angle (uses the XY diagonal + 10 % margin).
     """
     job_dir = os.path.join(config.JOBS_DIR, job_id)
     log_path = os.path.join(job_dir, 'pipeline.log')
@@ -91,14 +94,17 @@ def run_pipeline(job_id: str, stl_path: str, wind_angle: float) -> None:
         min_c, max_c, centre = coord_utils.get_stl_bbox(stl_path)
         raw_step = coord_utils.compute_step_size(min_c, max_c)
 
-        # Fix N_POINTS = 256; derive px_resolution so the full STL fits.
-        # STL2GeoTool computes: N_POINTS = int(STEP_SIZE / PX_RESOLUTION)
-        # We want N_POINTS == config.N_POINTS exactly, so:
-        #   PX_RESOLUTION = STEP_SIZE / N_POINTS
-        n_points = config.N_POINTS  # 256
-        # Use ceiling integer for step_size so we don't under-cover the STL
+        # Domain always covers the full STL with a 10 % margin.
         step_size = max(int(raw_step) + 1, 1)
-        px_resolution = step_size / n_points  # e.g. 250/256 ≈ 0.977 m
+
+        if user_px_resolution is not None:
+            px_resolution = user_px_resolution
+        else:
+            # Auto: target the default grid size (256 points).
+            px_resolution = step_size / config.N_POINTS
+
+        # STL2GeoTool computes: N_POINTS = int(STEP_SIZE / PX_RESOLUTION)
+        n_points = max(int(step_size / px_resolution), 1)
 
         preprocess_out = os.path.join(job_dir, 'preprocess_output')
         infer_out = os.path.join(job_dir, 'infer_output')
@@ -153,34 +159,69 @@ def run_pipeline(job_id: str, stl_path: str, wind_angle: float) -> None:
                                f'See {log_path} for details.')
 
         # ------------------------------------------------------------------
-        # Step 4: generate heatmap PNG from first UMAG CSV
+        # Step 4: scale inference output by reference velocity
         # ------------------------------------------------------------------
-        _update_status(job_dir, 'running', 'Generating heatmap…')
+        _update_status(job_dir, 'running', 'Scaling wind field…')
 
         umag_files = sorted(glob.glob(os.path.join(infer_out, 'input-*-UMAG.csv')))
         if not umag_files:
             raise RuntimeError('No UMAG CSV found after inference.')
         umag_csv = umag_files[0]
 
-        heatmap_png = os.path.join(job_dir, 'heatmap.png')
-        vmin, vmax = coord_utils.generate_heatmap_png(umag_csv, heatmap_png)
+        if ref_velocity != 1.0:
+            for csv_path in sorted(glob.glob(
+                    os.path.join(infer_out, 'input-*-*.csv'))):
+                data = np.loadtxt(csv_path, delimiter=',')
+                data *= ref_velocity
+                np.savetxt(csv_path, data, delimiter=',')
 
         # ------------------------------------------------------------------
-        # Step 5: write results.json
+        # Step 5: generate one heatmap PNG per wind field
+        # ------------------------------------------------------------------
+        _update_status(job_dir, 'running', 'Generating heatmaps…')
+
+        # Map field key → (CSV glob suffix, colormap, human label)
+        FIELD_SPECS = {
+            'UMAG': ('UMAG', 'Spectral_r', 'Wind speed magnitude (m/s)'),
+            'UGT':  ('UGT',  'Spectral_r', 'U component – X velocity (m/s)'),
+            'VGT':  ('VGT',  'Spectral_r', 'V component – Y velocity (m/s)'),
+        }
+
+        wind_fields = {}
+        for key, (suffix, cmap, label) in FIELD_SPECS.items():
+            csv_files = sorted(glob.glob(
+                os.path.join(infer_out, f'input-*-{suffix}.csv')))
+            if not csv_files:
+                continue
+            png_path = os.path.join(job_dir, f'heatmap_{key}.png')
+            vmin, vmax = coord_utils.generate_heatmap_png(
+                csv_files[0], png_path, cmap_name=cmap)
+            wind_fields[key] = {
+                'label': label,
+                'min': round(vmin, 4),
+                'max': round(vmax, 4),
+            }
+
+        if not wind_fields:
+            raise RuntimeError('No field CSVs found after inference.')
+
+        # ------------------------------------------------------------------
+        # Step 6: write results.json
         # ------------------------------------------------------------------
         results = {
             'wind_angle': wind_angle,
             'step_size': step_size,
+            'px_resolution': round(px_resolution, 4),
+            'n_points': n_points,
+            'ref_height': ref_height,
+            'ref_velocity': ref_velocity,
             'stl_bbox': {
                 'centre_x': float(centre[0]),
                 'centre_y': float(centre[1]),
                 'min_z': float(min_c[2]),
                 'max_z': float(max_c[2]),
             },
-            'wind_speed': {
-                'min': round(vmin, 4),
-                'max': round(vmax, 4),
-            },
+            'wind_fields': wind_fields,
         }
         with open(os.path.join(job_dir, 'results.json'), 'w') as f:
             json.dump(results, f, indent=2)

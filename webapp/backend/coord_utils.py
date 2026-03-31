@@ -23,26 +23,29 @@ def get_stl_bbox(stl_path: str):
 
 def compute_step_size(min_c: np.ndarray, max_c: np.ndarray) -> float:
     """
-    Compute STEP_SIZE = max(x_extent, y_extent) / 2 so the full STL footprint
-    fits within the [-STEP_SIZE, +STEP_SIZE]^2 CFD domain.
-    Returns a float in the same units as the STL (metres).
+    Compute STEP_SIZE as half the XY diagonal of the bounding box.
+
+    Using the diagonal (rather than the max side) guarantees that the
+    square domain [-STEP_SIZE, +STEP_SIZE]^2 fully contains the geometry
+    after any rotation around Z.
     """
     x_extent = float(max_c[0] - min_c[0])
     y_extent = float(max_c[1] - min_c[1])
-    return max(x_extent, y_extent) / 2.0
+    return np.sqrt(x_extent ** 2 + y_extent ** 2) / 2.0
 
 
-def generate_heatmap_png(umag_csv_path: str, out_png_path: str) -> tuple:
+def generate_heatmap_png(csv_path: str, out_png_path: str,
+                         cmap_name: str = 'jet') -> tuple:
     """
-    Read an N×N UMAG CSV (wind speed magnitude matrix output by inference),
-    and write a transparent-background jet heatmap PNG.
+    Read an N×N wind-field CSV and write a transparent-background heatmap PNG.
 
-    Returns (vmin, vmax) of the non-zero wind speed values for the legend.
+    cmap_name: any matplotlib colormap name (e.g. 'jet', 'plasma', 'viridis').
+    Returns (vmin, vmax) of the non-zero values, for the legend.
     """
-    data = np.loadtxt(umag_csv_path, delimiter=',')
+    data = np.loadtxt(csv_path, delimiter=',')
 
     # Mask solid-region zeros
-    masked = np.ma.masked_where(data <= 0.0, data)
+    masked = np.ma.masked_where(data == 0.0, data)
 
     if masked.count() > 0:
         vmin = float(masked.min())
@@ -50,7 +53,7 @@ def generate_heatmap_png(umag_csv_path: str, out_png_path: str) -> tuple:
     else:
         vmin, vmax = 0.0, 1.0
 
-    cmap = plt.cm.jet.copy()
+    cmap = plt.cm.get_cmap(cmap_name).copy()
     cmap.set_bad(alpha=0.0)  # transparent for masked (solid) cells
 
     fig, ax = plt.subplots(figsize=(8, 8))

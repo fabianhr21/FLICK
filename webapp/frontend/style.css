@@ -82,6 +82,61 @@ body {
   accent-color: var(--accent);
 }
 
+#sidebar input[type=number] {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 10px;
+  background: var(--bg-dark);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  transition: border-color 0.2s;
+}
+#sidebar input[type=number]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#sidebar select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 10px;
+  background: var(--bg-dark);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238899aa' d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  transition: border-color 0.2s;
+}
+#sidebar select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+#sidebar select option {
+  background: var(--bg-panel);
+}
+
+.ctrl-warning {
+  margin-top: 5px;
+  font-size: 0.72rem;
+  color: #f6ad55;
+  line-height: 1.4;
+}
+
+.ctrl-info {
+  margin-top: 5px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
 #run-btn {
   width: 100%;
   padding: 10px;
@@ -134,25 +189,137 @@ body {
   margin-top: 4px;
 }
 
+/* ── Overlay toggles ────────────────────────────────────────── */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+  margin-top: 4px;
+}
+.toggle-label input[type=checkbox] {
+  accent-color: var(--accent);
+}
+
+/* ── Download buttons ───────────────────────────────────────── */
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.dl-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-dark);
+  color: var(--text);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.dl-btn:hover {
+  border-color: var(--accent);
+  background: rgba(79,156,249,0.08);
+}
+
+/* ── Time series table ──────────────────────────────────────── */
+.ts-table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  color: var(--text);
+}
+.ts-table th {
+  color: var(--text-dim);
+  font-weight: 500;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.ts-table td {
+  padding: 2px 2px;
+}
+.ts-table input[type=number] {
+  width: 100%;
+  padding: 4px 6px;
+  background: var(--bg-dark);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+.ts-table input[type=number]:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.ts-del-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+}
+.ts-del-btn:hover { color: #fc8181; }
+.ts-add-btn {
+  margin-top: 4px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  width: 100%;
+  padding: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.ts-add-btn:hover { border-color: var(--accent); color: var(--text); }
+
+#anim-slider, #anim-rate {
+  width: 100%;
+  accent-color: var(--accent);
+  margin-top: 4px;
+}
+
 /* ── Legend ──────────────────────────────────────────────────── */
-#legend { display: none; flex-direction: column; gap: 6px; }
+#legend { display: none; flex-direction: column; gap: 4px; }
 #legend .legend-title {
   font-size: 0.78rem;
   color: var(--text-dim);
 }
 #legend-ramp {
-  height: 14px;
+  height: 16px;
   border-radius: 3px;
+  border: 1px solid var(--border);
   background: linear-gradient(to right,
     #00007f, #0000ff, #007fff, #00ffff,
     #7fff7f, #ffff00, #ff7f00, #ff0000);
 }
-.legend-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.72rem;
+#legend-ticks {
+  position: relative;
+  height: 18px;
+  font-size: 0.68rem;
   color: var(--text-dim);
 }
+#legend-ticks .tick {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+#legend-ticks .tick::before {
+  content: '';
+  display: block;
+  width: 1px;
+  height: 5px;
+  background: var(--text-dim);
+  margin: 0 auto 1px;
+}
+#legend-ticks .tick:first-child { transform: none; }
+#legend-ticks .tick:last-child  { transform: translateX(-100%); }
 
 /* ── Three.js canvas ─────────────────────────────────────────── */
 #canvas-wrap {

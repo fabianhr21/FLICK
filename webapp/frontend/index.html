@@ -41,8 +41,121 @@
            min="0" max="360" step="22.5" value="0" />
   </div>
 
+  <!-- Reference height -->
+  <div>
+    <div class="ctrl-label">
+      Reference height &nbsp;
+      <span id="height-label">10 m</span>
+    </div>
+    <input type="number" id="height-input"
+           min="1" max="500" step="1" value="10" />
+  </div>
+
+  <!-- Reference velocity -->
+  <div>
+    <div class="ctrl-label">
+      Reference velocity &nbsp;
+      <span id="vel-label">1.0 m/s</span>
+    </div>
+    <input type="number" id="vel-input"
+           min="0.1" max="100" step="0.1" value="1.0" />
+  </div>
+
+  <!-- Pixel resolution -->
+  <div>
+    <div class="ctrl-label">
+      Pixel resolution &nbsp;
+      <span id="res-label">auto</span>
+    </div>
+    <select id="res-select">
+      <option value="auto">Auto &mdash; 256 grid points</option>
+      <option value="0.25">0.25 m/px &mdash; very fine</option>
+      <option value="0.5">0.5 m/px &mdash; fine</option>
+      <option value="1.0">1.0 m/px &mdash; medium</option>
+      <option value="2.0">2.0 m/px &mdash; coarse</option>
+      <option value="4.0">4.0 m/px &mdash; very coarse</option>
+    </select>
+    <div id="res-info" class="ctrl-info" style="display:none"></div>
+  </div>
+
   <!-- Run button -->
   <button id="run-btn" disabled>▶ Run pipeline</button>
+
+  <!-- Field selector (enabled after results arrive) -->
+  <div id="field-section" style="display:none">
+    <div class="ctrl-label">Display field</div>
+    <select id="field-select">
+      <option value="UMAG">Magnitude |U| (m/s)</option>
+      <option value="UGT">U component &mdash; X velocity (m/s)</option>
+      <option value="VGT">V component &mdash; Y velocity (m/s)</option>
+    </select>
+  </div>
+
+  <!-- Overlay toggles (enabled after results arrive) -->
+  <div id="overlay-section" style="display:none">
+    <div class="ctrl-label">Overlays</div>
+    <label class="toggle-label">
+      <input type="checkbox" id="arrows-toggle" /> Wind arrows
+    </label>
+    <div style="margin-top:6px">
+      <div class="ctrl-label">Arrow density &nbsp;<span id="arrow-density-label">1.0×</span></div>
+      <input type="range" id="arrow-density" min="0.25" max="4" step="0.25" value="1"
+             style="width:100%; accent-color:var(--accent); margin-top:4px" />
+    </div>
+    <label class="toggle-label" style="margin-top:4px">
+      <input type="checkbox" id="streamlines-toggle" /> Streamlines
+    </label>
+  </div>
+
+  <!-- Download results (enabled after results arrive) -->
+  <div id="download-section" style="display:none">
+    <div class="ctrl-label">Download results</div>
+    <div class="btn-row">
+      <button id="dl-csv-btn" class="dl-btn">CSV (.zip)</button>
+      <button id="dl-geotiff-btn" class="dl-btn">GeoTIFF</button>
+    </div>
+  </div>
+
+  <!-- Time series upload (enabled after results arrive) -->
+  <div id="ts-section" style="display:none">
+    <div class="ctrl-label">Time series (anemometer)</div>
+    <div class="btn-row">
+      <button id="ts-upload-btn" class="dl-btn">Upload CSV</button>
+      <button id="ts-manual-btn" class="dl-btn">Enter manually</button>
+    </div>
+    <input type="file" id="ts-file-input" accept=".csv" style="display:none" />
+    <div id="ts-table-wrap" style="display:none">
+      <table id="ts-table" class="ts-table">
+        <thead><tr><th>Time (min)</th><th>Wind (m/s)</th><th></th></tr></thead>
+        <tbody id="ts-tbody"></tbody>
+      </table>
+      <button id="ts-add-row" class="ts-add-btn">+ Add row</button>
+      <button id="ts-save-btn" class="dl-btn" style="margin-top:6px;width:100%">Save &amp; apply</button>
+    </div>
+    <div id="ts-info" class="ctrl-info"></div>
+  </div>
+
+  <!-- Animation controls (enabled after time series loaded) -->
+  <div id="anim-section" style="display:none">
+    <div class="ctrl-label">
+      Animation &nbsp;
+      <span id="anim-time-label" style="color:var(--text);font-weight:600">t = 0 min</span>
+    </div>
+    <input type="range" id="anim-slider" min="0" max="1" step="0.0001" value="0" />
+    <div id="anim-speed-label" class="ctrl-info">Wind: &mdash; m/s</div>
+    <div class="btn-row" style="margin-top:6px">
+      <button id="anim-play-btn" class="dl-btn">&#9654; Play</button>
+      <button id="anim-stop-btn" class="dl-btn">&#9646;&#9646; Pause</button>
+      <button id="anim-reset-btn" class="dl-btn">&#8634; Reset</button>
+    </div>
+    <div style="margin-top:8px">
+      <div class="ctrl-label">
+        Playback speed &nbsp;
+        <span id="anim-rate-label" style="color:var(--text);font-weight:600">15.0 min/s</span>
+      </div>
+      <input type="range" id="anim-rate" min="0.1" max="120" step="0.1" value="15" />
+    </div>
+  </div>
 
   <!-- Progress -->
   <div id="progress-section">
@@ -58,14 +171,11 @@
     <pre id="log-output"></pre>
   </div>
 
-  <!-- Legend -->
+  <!-- Colorbar -->
   <div id="legend">
-    <div class="legend-title">Wind speed magnitude (m/s)</div>
+    <div id="legend-title" class="legend-title">Wind speed magnitude (m/s)</div>
     <div id="legend-ramp"></div>
-    <div class="legend-labels">
-      <span id="legend-min">0.00</span>
-      <span id="legend-max">1.00</span>
-    </div>
+    <div id="legend-ticks"></div>
   </div>
 </aside>
 
