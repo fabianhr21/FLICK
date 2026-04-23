@@ -15,9 +15,9 @@ from ansa import batchmesh
 deck = constants.OPENFOAM
 params = "/home/fabianh/FLICK_untouched/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
 working_directory = "/home/fabianh/FLICK_untouched/pre-process/geo4CFD/ANSA_SCRIPTS/"
-file_path = "/home/fabianh/GEO_CASES/round_2/BARCELONA/3-34/output/"
-input_file = "3-34_Buildings"
-target_path = "/home/fabianh/GEO_CASES/round_2/BARCELONA/3-34/output/"
+file_path = "/home/fabianh/GEO_CASES/BARCELONA/295-120/output/"
+input_file = "295-120_Buildings"
+target_path = "/home/fabianh/GEO_CASES/BARCELONA/295-120/output/"
 
 
 def generate_geo(geo_script, target_geo, input_file,y_length,prec_length):
@@ -581,8 +581,8 @@ def main():
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':14})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//50}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "2")
+        mesh.NumberPerimeters([cons[0],cons[2]],f"{y_length_domain//17.5}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "4")
         bottom_ents.append(ent[0])
     else:
         print("Bottom inlet face not found")
@@ -594,8 +594,8 @@ def main():
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':12})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//50}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "2")
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{y_length_domain//25}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "3")
         bottom_ents.append(ent[0])
     else:
         print("Bottom outlet face not found")
@@ -607,8 +607,8 @@ def main():
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':15})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//50}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "2")
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//25}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "3")
         bottom_ents.append(ent[0])
     else:
         print("Bottom north face not found")
@@ -621,8 +621,8 @@ def main():
     if ent != []:
         base.SetEntityCardValues(deck, ent[0], {'PID':13})
         cons = base.CollectEntities(deck, None,"CONS", filter_visible=True)
-        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//50}")
-        mesh.NumberPerimeters([cons[1],cons[3]], "2")
+        mesh.NumberPerimeters([cons[0],cons[2]], f"{x_length_domain//25}")
+        mesh.NumberPerimeters([cons[1],cons[3]], "3")
         bottom_ents.append(ent[0])
     else:
         print("Bottom south face not found") 

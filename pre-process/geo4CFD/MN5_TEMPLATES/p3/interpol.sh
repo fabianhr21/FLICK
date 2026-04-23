@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --ntasks=112
 #SBATCH --time=02:00:00
-#SBATCH --qos=gp_bsccase
-#SBATCH --account=bsc21
+#SBATCH --qos=gp_resc
+#SBATCH --account=upc76
 
 module purge
 #module load openmpi/4.1.5-gcc ucx/1.15.0-gcc hdf5/1.14.1-2-gcc-openmpi cmake

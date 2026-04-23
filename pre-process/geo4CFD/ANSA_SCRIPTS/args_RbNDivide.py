@@ -8,6 +8,8 @@ import sys
 import math
 
 deck = constants.OPENFOAM
+city = "BARCELONA/"
+case = "270-46"
 output_path = "/home/fabianh/GEO_CASES/BARCELONA/270-46/output/"
 output_name = "precursor"
 distance = -5000  # Precursor length spanwise
@@ -124,17 +126,9 @@ def DividePIDbyFaceOrientation(pid_id: int, new_pid_list=None):
     used_buckets = sum(bool(g) for g in groups.values())
     print(f"Divided PID {pid_id} into {used_buckets} orientation‐based PIDs.")
 
-def main(input_file,dimensions_file,output_name=output_name, output_path=output_path):
-    # Read dimensions .txt file and extract z_length
-	with open(dimensions_file, 'r') as dim_file:
-		lines = dim_file.readlines()
-		for line in lines:
-			if "z_length" in line:
-				z_length = float(line.split(':')[1].strip())
-				print(f"Extracted z_length: {z_length}")
-				print(f"Setting precursor distance to 6h, -{math.floor(6*z_length)}")
-				break
-	distance = -math.floor(6*z_length)
+def main(input_file, output_path=output_path, city=city, case=case):
+	mn5_geo_path = "/home/fabianh/GEO_CASES/round_2/" + city + case + "/output/MN5/" + case + "_Buildings.geo"
+	output_name = output_path + case
 	# # Load input file
 	base.Open(input_file)
 	base.Clear()
@@ -154,22 +148,31 @@ def main(input_file,dimensions_file,output_name=output_name, output_path=output_
 	# Create the skin, divide and assign to their respective domain PIDs
 	solid_ex = base.GetEntity(deck, "SOLID_PROPERTY", 13)
 	base.CreateShellsFromSolidFacets("skin", 13)
-	base.Orient()
+	#base.Orient()
 	DividePIDbyFaceOrientation(12)
 	
 	# Create Domain Precursor
 	inlet = base.GetEntity(deck, "SHELL_PROPERTY", 2)
 	base.GeoTranslate("COPY","AUTO_OFFSET","SAME PART","COPY",-100,0,0,inlet,keep_connectivity=True,draw_results=False)
 	
-	# # Precursor parameters
-	# distance = -5000
-	element_length = 20
+    # Read avg_height from domain_dimensions.txt
+	domain_file_path = output_path + "domain_dimensions.txt"
+	with open(domain_file_path, "r") as domain_file:
+		lines = domain_file.readlines()
+		for line in lines:
+			if line.startswith("precursor_length"):
+				length=float(line.split('=')[1].strip())
+				print(length)
+				distance = math.ceil(length)
+				print("Precursor length read from file:", distance)
+				break
+            
 
 	# Create Precursor
 	precursor_outlet = base.GetEntity(deck, "SHELL_PROPERTY", 14)
 	source = base.CollectEntities(deck, precursor_outlet, "SHELL")
 	extrude = mesh.VolumesExtrude()
-	extrusion = extrude.offset(source=source, source_remove=source, steps=25, distance=distance)
+	extrusion = extrude.offset(source=source, source_remove=source, steps=25, distance=-distance)
 	base.DeleteEntity(precursor_outlet,True,True)
 	
 	#Orient result
@@ -206,12 +209,13 @@ def main(input_file,dimensions_file,output_name=output_name, output_path=output_
 	
 	#Split to Hexa
 	splitTOhexa()
-      
-	print("Outputting CGNS file... to " + output_path + output_name + ".cgns")
 	
+	# PRint output name
+	print(f"Saving: {output_name}_Buildings.cgns")
+
 	#Output CGNS
 	base.OutputCGNS(
-        f"{output_path}{output_name}.cgns",
+        f"{output_name}_Buildings.cgns",
         mode="all",
         filetype="HDF5",
         format="unstructured",
@@ -220,7 +224,8 @@ def main(input_file,dimensions_file,output_name=output_name, output_path=output_
         version="v3.2.0",
         bc_correspondence="yes"
     )
-
+	#Output GEO
+	os.system(f"gmsh {mn5_geo_path} -save ")
 
 # if __name__ == '__main__':
 # 	main()

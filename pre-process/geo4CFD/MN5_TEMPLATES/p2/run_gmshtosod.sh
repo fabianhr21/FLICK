@@ -18,7 +18,10 @@ module purge
 module load impi intel mkl hdf5 python
 
 ln -sf ../{{BASENAME}}_Buildings.msh .
-ln -sf /gpfs/scratch/bsc21/bsc084826/SOD2D/sod2d_gitlab/msh_p2/tool_meshConversorPar/tool_meshConversorPar .
+# ln -sf /gpfs/scratch/upc76/fabian/sims_sod2d/GEO_CASES/sod2d_gitlab/msh_p2/tool_meshConversorPar/tool_meshConversorPar .
+# ln -sf /gpfs/scratch/upc76/fabian/sims_sod2d/GEO_CASES/sod2d_gitlab/run_p2/src/app_sod2d/sod2d .
+
+ln -sf /gpfs/scratch/bsc21/bsc084826/SOD2D/sod2d_gitlab/msh_p2/tool_meshConversorPar/tool_meshConversorPar . 
 ln -sf /gpfs/scratch/bsc21/bsc084826/SOD2D/sod2d_gitlab/run_p2/src/app_sod2d/sod2d .
 
 gmsh {{BASENAME}}_Buildings_p2.geo -save

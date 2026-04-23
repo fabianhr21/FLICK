@@ -129,9 +129,10 @@ def create_city4cfd_config(output_dir, center_point, radius,bounds, ground_laz, 
     print(f"CITY4CFD configuration generated at: {config_path}")
     return config_path
 
-def get_laz_crs(laz_path):
+def get_laz_crs(laz_path, default_crs=DEFAULT_CRS):
     las = laspy.read(laz_path)
     crs = las.header.parse_crs()
+    crs = crs if crs else CRS.from_user_input(default_crs)
     if crs:
         pyproj_crs = crs.from_wkt(crs.to_wkt())
         epsg = pyproj_crs.to_epsg()
@@ -142,7 +143,7 @@ def get_laz_crs(laz_path):
     else:
         raise ValueError("No CRS found in LAZ header.")
     
-def merge_laz_files(input_directory, output_laz):
+def merge_laz_files(input_directory, output_laz, default_crs=DEFAULT_CRS):
     """
     Merge all LAZ files in the input directory into a single output LAZ file.
     If files have different CRS, reprojects all to the most common CRS before merging.
@@ -156,13 +157,28 @@ def merge_laz_files(input_directory, output_laz):
     if not laz_files:
         raise ValueError("No LAZ files found in the input directory.")
 
+    
+    
     # Detect CRS of each file
     file_epsg = {}
+    bad_files = []
     for f in laz_files:
         try:
             file_epsg[f] = get_laz_crs(f)
         except ValueError:
-            file_epsg[f] = None
+            # If no CRS found, use default and warn
+            sys.stderr.write(f"Warning: No CRS found in {f}. Defaulting to {default_crs} for this file.\n")
+            file_epsg[f] = CRS.from_user_input(default_crs).to_epsg()
+        except Exception as e:
+            # Corrupted/truncated file — skip it
+            sys.stderr.write(f"Warning: Cannot read {f} (corrupt/truncated): {e}. Skipping.\n")
+            bad_files.append(f)
+
+    laz_files = [f for f in laz_files if f not in bad_files]
+    if not laz_files:
+        raise ValueError("All LAZ files are corrupt or unreadable.")
+            
+            # file_epsg[f] = None
 
     valid_epsgs = [e for e in file_epsg.values() if e is not None]
     if not valid_epsgs:
@@ -466,8 +482,6 @@ def separate_laz_file(input_laz, output_dir=None):
     return ground_laz, building_laz
 
 def main():
-    DEFAULT_CRS = 'EPSG:25830'
-
     parser = argparse.ArgumentParser(description="Clip LAZ and fetch OSM buildings in same CRS")
     parser.add_argument('--input','-i', help="Input LAZ file")
     parser.add_argument('--input_dir','-id' ,help="Input directory with LAZ files")
@@ -481,6 +495,8 @@ def main():
     parser.add_argument('--output_dir','-o', required=True, help="Output directory")
     parser.add_argument('--output_filename', default='clipped', help="Output filename prefix")
     args = parser.parse_args()
+
+    fallback_crs = args.crs if args.crs else DEFAULT_CRS
 
     if not args.input and not args.input_dir:
         parser.error('Specify --input or --input_dir')
@@ -496,19 +512,19 @@ def main():
     # Handle Input (Dir vs File)
     if args.input_dir:
         if os.path.isdir(args.input_dir):
-            args.input = merge_laz_files(args.input_dir, os.path.join(args.output_dir, args.output_filename + '_merged.laz'))
+            args.input = merge_laz_files(args.input_dir, os.path.join(args.output_dir, args.output_filename + '_merged.laz'), default_crs=fallback_crs)
         else:
             raise ValueError("Input directory does not exist.")
     
-    # Determine CRS
+    # Determine CRS: prefer --crs arg, then header, then DEFAULT_CRS
     if args.crs:
         laz_crs = args.crs
     else:
         try:
-            laz_crs = get_laz_crs(args.input)
-        except ValueError:
-            laz_crs = DEFAULT_CRS
-            sys.stderr.write(f"Warning: using default CRS {DEFAULT_CRS}\n")
+            laz_crs = get_laz_crs(args.input, fallback_crs)
+        except (ValueError, Exception):
+            laz_crs = fallback_crs
+            sys.stderr.write(f"Warning: using default CRS {fallback_crs}\n")
     print(f"LAZ CRS: {laz_crs}")
 
     # Transform center_latlon (EPSG:4326) to LAZ CRS if provided

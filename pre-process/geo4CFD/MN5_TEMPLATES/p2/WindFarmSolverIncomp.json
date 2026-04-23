@@ -40,7 +40,7 @@
    "period_walave":600.0,
    "flag_fs_fix_pressure":true,  
 
-   "cfl_conv":0.8,
+   "cfl_conv":0.9,
 
    "rho0":1.0,
    "Lz":"{{LZ}}",

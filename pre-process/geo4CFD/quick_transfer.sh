@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIR="/home/fabianh/GEO_CASES/round_2/"
-CITIES=("MADRID" "VALENCIA" "SEVILLA" "ZARAGOZA") # "BARCELONA" "MADRID"
+CITIES=("VALENCIA" "SEVILLA" "ZARAGOZA") # "BARCELONA" "MADRID"
 ansa_path=/home/fabianh/ANSA/BETA_CAE_Systems24.1/ansa_v24.1.2/ansa64.sh
 working_directory="/home/fabianh/FLICK_untouched/pre-process/geo4CFD/ANSA_SCRIPTS/"
 
@@ -20,8 +20,6 @@ until ssh -S "$SOCKET" -O check "${REMOTE_USER}@${REMOTE_HOST}" 2>/dev/null; do
 done
 echo "SSH master connection established."
 
-
-
 for city in "${CITIES[@]}"; do
     for d in $DIR$city/*/ ; do
         # Ignore __pycache__ directories
@@ -33,9 +31,9 @@ for city in "${CITIES[@]}"; do
     echo "Using buildings file: $buildings_file"
     # echo "RUnning Path: '${d}output/'"
     # $ansa_path -nogui -noopencl -execscript "${working_directory}args_RbNDivide.py|main('${buildings_file}','${d}output/','${city}/','${dirname}')"
-    SRC="${d}output/MN5/p3/WindFarmSolverIncomp.json"
+    SRC="${d}output/MN5/p3/"
     echo "Sending MN5 directory to remote host: ${SRC}"
-    rsync --progress -e "ssh -S $SOCKET" -r "${SRC}" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_BASE}/${city}/${dirname}/p3/"
+    rsync --progress -e "ssh -S $SOCKET" -r "${SRC}"*gmshtosod.sh "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_BASE}/${city}/${dirname}/p3/"
     # break
     done
 done
