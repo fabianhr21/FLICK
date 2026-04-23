@@ -129,13 +129,24 @@ def create_city4cfd_config(output_dir, center_point, radius,bounds, ground_laz, 
     print(f"CITY4CFD configuration generated at: {config_path}")
     return config_path
 
+def _extract_projected_epsg(pyproj_crs):
+    """For compound CRS, find the projected sub-CRS and return its EPSG."""
+    # Compound CRS (e.g. PROJCRS + vertical): iterate sub-CRS list
+    if pyproj_crs.is_compound:
+        for sub in pyproj_crs.sub_crs_list:
+            if sub.is_projected:
+                epsg = sub.to_epsg()
+                if epsg:
+                    return epsg
+    return pyproj_crs.to_epsg()
+
 def get_laz_crs(laz_path, default_crs=DEFAULT_CRS):
     las = laspy.read(laz_path)
     crs = las.header.parse_crs()
     crs = crs if crs else CRS.from_user_input(default_crs)
     if crs:
-        pyproj_crs = crs.from_wkt(crs.to_wkt())
-        epsg = pyproj_crs.to_epsg()
+        pyproj_crs = CRS.from_wkt(crs.to_wkt())
+        epsg = _extract_projected_epsg(pyproj_crs)
         if epsg is None:
             print(f"Use this to find your default EPSG code: {pyproj_crs.to_wkt()}")
             raise ValueError("No EPSG code found in LAZ header.")
