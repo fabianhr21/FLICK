@@ -1,3 +1,0 @@
-[submodule "pyQvarsi/postproc/pyplomb"]
-	path = pyQvarsi/postproc/pyplomb
-	url = https://gitlab.com/ArnauMiro/pyplomb.git

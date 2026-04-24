@@ -1,0 +1,10 @@
+include LICENSE README.md CHANGELOG.md
+include requirements*.txt
+recursive-include flick_urban *.py
+recursive-include Examples *.py *.stl
+recursive-include docs *.rst *.py *.md
+recursive-include Testsuite *.py
+exclude output_sanjeronimo.stl
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so

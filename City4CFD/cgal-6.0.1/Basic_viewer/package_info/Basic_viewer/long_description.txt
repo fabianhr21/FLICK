@@ -1,3 +1,0 @@
-Implementation of basic viewers.
-
-A basic viewer allows to visualize a data structure of CGAL.

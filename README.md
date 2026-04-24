@@ -1,64 +1,108 @@
 # FLICK
 
-FMUC - Fast Modeling Urban Climate is a package developed in collaboration with the Barcelona Supercomputing Center and the Universitat Politècnica de Catalunya to model wind at urban scales using Neural Networks.
+[![CI](https://github.com/fabianhr21/FLICK/actions/workflows/python-tests.yml/badge.svg)](https://github.com/fabianhr21/FLICK/actions/workflows/python-tests.yml)
+[![Docs](https://github.com/fabianhr21/FLICK/actions/workflows/docs.yml/badge.svg)](https://github.com/fabianhr21/FLICK/actions/workflows/docs.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 
-## Functionality
-This repository is a guideline for generating urban wind analysis from mesoscale weather models and urban geometry.
+**FLICK** (Fast Modelling of Urban Climate) predicts urban wind fields from mesoscale weather models and urban geometry using a U-Net neural network. Developed in collaboration with the [Barcelona Supercomputing Center](https://www.bsc.es/) and the Universitat Politècnica de Catalunya.
 
-## Pre-Process
-The `pre-process` directory contains scripts to convert STL or BIM geometry into the format expected by the neural network. Geometry is georeferenced so that the wind fields can later be mapped back. BIM files already contain both information and are therefore recommended.
+## Pipeline
 
-You can obtain BIM models from all of Catalunya at <https://geoportalcartografia.amb.cat/AppGeoportalCartografia2/index.html> and from all Spain at <https://centrodedescargas.cnig.es/CentroDescargas/buscar-mapa>.
+```
+STL/BIM geometry
+      ↓
+[flick_urban.preprocess]  →  H5 file (MASK, HEIGHT, WIND_DIST features)
+      ↓
+[flick_urban.nn]          →  normalized U, V velocity fields (U-Net)
+      ↓
+[flick_urban.postprocess] →  composited wind field + visualizations
+```
 
-The City4CFD project can also be used to generate CFD domains. The workflow provided here focuses on preparing geometry for simulation with the SOD2D solver.
-The next picture shows a diagram of the workflow for preparing any LiDAR dataset into a CFD-ready mesh.
+## Installation
+
+**1. Clone with submodules**
+
+```bash
+git clone https://github.com/fabianhr21/FLICK.git
+cd FLICK
+git submodule update --init --recursive
+```
+
+**2. Install Python package**
+
+```bash
+pip install -e .             # base
+pip install -e .[gpu]        # + PyTorch/CUDA
+pip install -e .[hpc]        # + MPI (mpi4py)
+pip install -e .[gpu,hpc]    # full
+pip install -e .[dev]        # + pytest (for development)
+```
+
+**3. Compile external tools**
+
+```bash
+bash scripts/compile_tools.sh
+```
+
+Installs system dependencies, compiles City4CFD, and creates the `city4cfd` symlink.
+
+## Model Weights
+
+The neural network weights are **not included** in this repository.  
+Request them from: fabian.hernandez@bsc.es  
+Expected location after receiving: `170625_weights/`
+
+## Geometry Sources
+
+BIM models (recommended — contain geometry and metadata):
+- Catalonia: https://geoportalcartografia.amb.cat/AppGeoportalCartografia2/index.html
+- Spain: https://centrodedescargas.cnig.es/CentroDescargas/buscar-mapa
+
+City4CFD can generate CFD domains from LiDAR data. The workflow targets the SOD2D solver.
 
 <img width="1730" height="223" alt="image" src="https://github.com/user-attachments/assets/afcbd7ca-1ed1-4127-936d-507c983230f4" />
 
-## Wind-NN
-The `wind-nn` folder hosts the surrogate neural network used to predict wind behaviour. The model outputs normalized velocity components.
+## Running the Workflow
 
-The Neural Network Weights should be asked to fabian.hernandez@bsc.es
-
-## Post-Process
-Scripts in `post-process` scale the predicted wind velocity and generate visualisations.
-
-## Environment prerequisites
-- **Python** 3.8 or newer with the packages listed in `requirements.txt`.
-- **pyQvarsi** can be compiled from https://gitlab.com/ArnauMiro/pyqvarsi.git
-- **CUDA** environment
-
-## Compiling City4CFD and pyQvarsi
-All external tools can be built by running `compile_tools.sh` from the repository root:
-```bash
-bash compile_tools.sh
-```
-This installs the required dependencies with `apt`, compiles City4CFD inside `City4CFD/build` and creates a symlink in `pre-process/geo4CFD/` to the resulting `city4cfd` binary. To build pyQvarsi manually, run `make` inside the `pyqvarsi` directory.
-
-## Executing the workflow
 ### Locally
-Each step can be executed separately. Example commands using the provided `grid_of_cubes.stl` are:
+
 ```bash
-# Pre-processing
-As a bash script, you can run ./run_stl. Otherwise, you could run the STL2GeoTool.py with the desired arguments. This will output the sample ready to make the wind inference.
-# Inference
-python wind-nn/170625_weights/inference-script.py -data_sample_basename name
-For this, you should have the weights of the model
+# Pre-process STL geometry
+python -c "from flick_urban.preprocess.stl2geo import main; main()" --input grid_of_cubes.stl
+
+# Inference (requires model weights)
+python -c "from flick_urban.nn.inference import main; main()" --data_sample_basename name
+
+# Post-process
+python -c "from flick_urban.postprocess.overlap import main; main()"
+```
+
+### HPC (MareNostrum 5 / SLURM)
+
+```bash
+sbatch scripts/RUN_WORKFLOW.sh grid_of_cubes
+```
+
+Adjust SBATCH parameters in the script. SLURM templates for MN5 partitions p2/p3 are in `scripts/hpc/`.
+
+## Package Structure
 
 ```
-### HPC clusters
-The `RUN_WORKFLOW.sh` script wraps the entire process for SLURM clusters. Submit it with the STL base name as argument:
-```bash
-sbatch ./RUN_WORKFLOW.sh grid_of_cubes
+flick_urban/
+├── preprocess/       # STL/BIM → H5 feature extraction
+│   └── geo4cfd/      # City4CFD integration + ANSA meshing automation
+├── nn/               # U-Net model, inference
+└── postprocess/      # tile stitching, velocity maps, visualization
 ```
-Adjust the SBATCH parameters in the script to match your system configuration.
 
-## Directory overview
-- **pre-process** – geometry preparation tools and scripts.
-- **wind-nn** – the trained neural network and inference code.
-- **post-process** – utilities to compose the final wind field output.
-- **City4CFD** – source code of the City4CFD geometry generator.
-- **pyqvarsi** – post‑processing library used by the workflow.
+## External Dependencies (submodules)
 
-For ant doubts contact fabian.hernandez@bsc.es
+| Submodule | URL | Purpose |
+|-----------|-----|---------|
+| City4CFD | https://github.com/tudelft3d/City4CFD | 3D urban geometry from LiDAR + 2D polygons |
+| pyqvarsi | https://gitlab.com/ArnauMiro/pyQvarsi | CFD post-processing library |
 
+## Contact
+
+fabian.hernandez@bsc.es

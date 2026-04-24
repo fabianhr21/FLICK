@@ -1,4 +1,11 @@
-# Ignore workflow output directories
+# Workflow output directories
+flick_urban/preprocess/output/
+flick_urban/nn/output/
+flick_urban/postprocess/final_output/
+results/
+170625_weights/
+
+# Legacy output paths (main branch compatibility)
 Pre-Process/output/
 pre-process/output/
 Wind-NN/output/
@@ -6,18 +13,25 @@ wind-nn/output/
 Post-Process/final_output/
 post-process/final_output/
 
-# Python cache directories
+# Python cache
 __pycache__/
 */__pycache__/
-
-# Python build artifacts
+**/__pycache__/
 *.py[cod]
 *.so
 *.egg
 *.egg-info/
+
+# Build artifacts
 dist/
 build/
+docs/build/
+
+# Model weights (not distributed)
 *pt
+*.pth
+*.ckpt
+
 # Virtual environments
 .env/
 .venv/
@@ -27,4 +41,4 @@ ENV/
 # Misc
 *.log
 *.tmp
-
+*.dmp
