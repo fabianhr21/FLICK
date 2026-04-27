@@ -34,9 +34,6 @@ git submodule update --init --recursive
 ```bash
 pip install -e .             # base
 pip install -e .[gpu]        # + PyTorch/CUDA
-pip install -e .[hpc]        # + MPI (mpi4py)
-pip install -e .[gpu,hpc]    # full
-pip install -e .[dev]        # + pytest (for development)
 ```
 
 **3. Compile external tools**

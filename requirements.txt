@@ -5,3 +5,9 @@ matplotlib
 pandas
 numpy-stl
 ifcopenshell
+pytest
+cython
+sphinx
+sphinx-rtd-theme
+myst-parser
+sphinx-autodoc-typehints
