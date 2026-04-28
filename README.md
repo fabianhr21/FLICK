@@ -8,7 +8,7 @@
 **FLICK** (Fast and Light Inference for Climate Knowledge) predicts urban wind fields from mesoscale weather models and urban geometry using a U-Net neural network. Developed in collaboration with the [Barcelona Supercomputing Center](https://www.bsc.es/) and the Universitat Politècnica de Catalunya.
 
 ## Fast and Light Inference for Climate Knowledge
-FLICK is a designed tool to help in preprocessing for both simulation and some ready machine learning tools inference. Please check the wiki(https://github.com/fabianhr21/FLICK/wiki) for instructions on how to deploy and contribute to the tool. Here you can find the code documentation and examples on every module.
+FLICK is a designed tool to help in preprocessing for both simulation and some ready machine learning tools inference. Please check the [wiki](https://github.com/fabianhr21/FLICK/wiki) for instructions on how to deploy and contribute to the tool. Here you can find the code documentation and examples on every module.
 
 ## Of the current work
 Until now, the wind neural network has demonstrated good accuracy in the dataset, as Calafell et al.1 describe in their publication. Furthermore, The model has proven to be easy and adaptable to different geometries and contextual windows.
