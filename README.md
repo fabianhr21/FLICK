@@ -16,7 +16,11 @@ Until now, the wind neural network has demonstrated good accuracy in the dataset
 As part of the new extension of the research and applications, we have found that the Neural Network can make inferences on much bigger domains than the ones it was trained on. As shown in the next picture.
 image
 
-Furthermore, a comparison was made the comparission between high-fidelity simulations performed with SOD2D2. The solver has been validated over idealized3 and realistic4,5 urban configurations. image
+<img width="486" height="390" alt="image" src="https://github.com/user-attachments/assets/0ae35912-8368-4222-9311-be7a9e5ce450" />
+
+Furthermore, a comparison was made the comparission between high-fidelity simulations performed with SOD2D<sup>2</sup>. The solver has been
+validated over idealized<sup>3</sup> and realistic<sup>4,</sup><sup>5</sup> urban configurations.
+<img width="1790" height="427" alt="image" src="https://github.com/user-attachments/assets/7e04ff63-facd-4ece-aea3-a28974124ec8" />
 
 Even though the structure of the field seems very similar, the average error is ~40%, and the error is attributed to the complete change in the geometry, as the unseen geometry differs from the geometries on which the model was trained. Currently, some extensive work is being done on improving the dataset and obtaining a more comprehensive dataset.
 
