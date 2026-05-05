@@ -11,3 +11,5 @@ sphinx
 sphinx-rtd-theme
 myst-parser
 sphinx-autodoc-typehints
+pyqvarsi
+
