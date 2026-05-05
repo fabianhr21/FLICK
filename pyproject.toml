@@ -5,16 +5,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "flick_urban"
 dynamic = ["version"]
-description = "Fast urban wind modelling via neural networks (BSC/UPC)"
+description = "Fast urban wind modelling via neural networks"
 readme = "README.md"
 license = {file = "LICENSE"}
 requires-python = ">=3.8"
 authors = [
-    {name = "Fabian Hernández", email = "fabian.hernandez@bsc.es"}
+    {name = "Fabian Hernández", email = "fabian.alexis.hernandez@upc.edu"},
+    {name = "Josep María Duró"},
+    {name = "Arnau Miró"},
+    {name = "Oriol Lehmkul"},
+    {name = "Ivette Rodríguez"},
 ]
 keywords = ["urban wind", "CFD", "neural network", "UNet", "urban climate", "BSC"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: v1.0",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -36,10 +40,6 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu = ["torch>=1.12"]
-hpc = ["mpi4py", "nfft"]
-dev = ["pytest", "cython"]
-docs = ["sphinx", "sphinx-rtd-theme", "myst-parser", "sphinx-autodoc-typehints"]
-all = ["torch>=1.12", "mpi4py", "nfft", "pytest", "cython"]
 
 [project.urls]
 Homepage = "https://github.com/fabianhr21/FLICK"
