@@ -9,7 +9,7 @@
 FLICK is a designed tool to help in preprocessing for both simulation and some ready machine learning tools inference. Please check the [wiki](https://github.com/fabianhr21/FLICK/wiki) for instructions on how to deploy and contribute to the tool. Here you can find the code documentation and examples on every module.
 
 ## Cite this repo!
-'''
+
 @misc{FLICK,
   author    = {Hernández, Fabián and Duró, Josep and Miro, Arnau and Lehmkuhl, Oriol and Rodríguez, Ivette},
   title     = {FLICK: Fast and Light Inference for Climate Knowledge},
@@ -18,7 +18,7 @@ FLICK is a designed tool to help in preprocessing for both simulation and some r
   journal   = {GitHub repository},
   url       = {https://github.com/fabianhr21/FLICK/},
 }
-'''
+
 
 ## Of the current work
 Until now, the wind neural network has demonstrated good accuracy in the dataset, as Calafell et al.1 describe in their publication. Furthermore, The model has proven to be easy and adaptable to different geometries and contextual windows.
