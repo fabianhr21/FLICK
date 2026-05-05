@@ -1,6 +1,3 @@
 [submodule "City4CFD"]
 	path = City4CFD
 	url = https://github.com/tudelft3d/City4CFD.git
-[submodule "pyqvarsi"]
-	path = pyqvarsi
-	url = https://gitlab.com/ArnauMiro/pyQvarsi.git
