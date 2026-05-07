@@ -1,7 +1,5 @@
 # FLICK
 
-[![CI](https://github.com/fabianhr21/FLICK/actions/workflows/python-tests.yml/badge.svg)](https://github.com/fabianhr21/FLICK/actions/workflows/python-tests.yml)
-[![Docs](https://github.com/fabianhr21/FLICK/actions/workflows/docs.yml/badge.svg)](https://github.com/fabianhr21/FLICK/actions/workflows/docs.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 
