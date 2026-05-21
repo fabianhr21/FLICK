@@ -1,4 +1,15 @@
-#### GOOOD ONE ######
+"""
+overlap.py — Stitch overlapping tiled wind field predictions.
+
+Combines N×M prediction tiles into a single full-domain field using
+exponential-decay blending at tile boundaries.
+
+Example
+-------
+    python -m flick_urban.postprocess.overlap \\
+        -dataset_path ./output/output0-grid_of_cubes/ \\
+        -basename grid_of_cubes -N_points 256 -x_frames 5 -y_frames 5
+"""
 import os
 import numpy as np
 import pandas as pd
@@ -6,33 +17,19 @@ import matplotlib.pyplot as plt
 import re
 from PIL import Image
 import argparse
-import sys
-sys.path.append('../Pre-Process/')
-import STL2GeoTool_loop
-
-#### PARAMETERS FROM WIND-NN ####
-p_overlap = 0.5                     # Overlap percentage
-N_points = 256                      # Number of points in the output matrix
-y_frames = 5                        # Number of frames in the y direction
-x_frames = 5                        # Number of frames in the x direction
-DATASET_PATH='../Wind-NN/output/'   # Path to the output files
-output_dir = './final_output/'      # Path to save the final output
-basename = 'grid_of_cubes'          # Basename of the output files
-x_factor = 1.5                      # Window weight in the x direction
-y_factor = 1.5                      # Window weight in the y direction
-##################################
 
 def get_args():
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
-    parser.add_argument('-overlap', type=float, default=p_overlap, help='overlap percentage')
-    parser.add_argument('-N_points', type=int, default=N_points, help='number of points in the output matrix')
-    parser.add_argument('-y_frames', type=int, default=y_frames, help='number of frames in the y direction')
-    parser.add_argument('-x_frames', type=int, default=x_frames, help='number of frames in the x direction')
-    parser.add_argument('-dataset_path', default=DATASET_PATH, help='dataset folder name.')
-    parser.add_argument('-output_dir', default=output_dir, help='output folder name')
-    parser.add_argument('-basename', default=basename, help='output files basename')
-    parser.add_argument('-x_factor', type=float, default=x_factor, help='window weight in the x direction')
-    parser.add_argument('-y_factor', type=float, default=y_factor, help='window weight in the y direction')
+    parser.add_argument('-overlap', type=float, default=0.5, help='overlap percentage')
+    parser.add_argument('-N_points', type=int, default=256, help='number of points in the output matrix')
+    parser.add_argument('-y_frames', type=int, default=5, help='number of frames in the y direction')
+    parser.add_argument('-x_frames', type=int, default=5, help='number of frames in the x direction')
+    parser.add_argument('-dataset_path', default='../Wind-NN/output/', help='dataset folder name.')
+    parser.add_argument('-output_dir', default='./final_output/', help='output folder name')
+    parser.add_argument('-basename', default='grid_of_cubes', help='output files basename')
+    parser.add_argument('-x_factor', type=float, default=1.5, help='window weight in the x direction')
+    parser.add_argument('-y_factor', type=float, default=1.5, help='window weight in the y direction')
+    parser.add_argument('-wind_direction', type=float, default=0.0, help='wind direction angle in degrees')
     args, _ = parser.parse_known_args()
     return args
 
@@ -157,8 +154,8 @@ if __name__ == '__main__':
     basename = args.basename
     x_factor = args.x_factor
     y_factor = args.y_factor
-    for wind_angle in STL2GeoTool_loop.WIND_DIRECTION:
-        p_overlap = STL2GeoTool_loop.p_overlap
+    for wind_angle in [args.wind_direction]:
+        p_overlap = args.overlap
         print(f'Processing output{wind_angle}-{basename}...')
         
         output_dir = './final_output/' + f'output{wind_angle}-{basename}/'

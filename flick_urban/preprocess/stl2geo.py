@@ -1,13 +1,30 @@
-# STL2GeoTool_loop.py
+"""
+stl2geo.py — Main MPI+GPU preprocessing script.
+
+Converts an STL city model into HDF5 feature maps (MASK, HEGT, WDST, U, V)
+tiled across a configurable domain with optional wind-direction rotation.
+
+Usage
+-----
+    mpirun -n 4 python -m flick_urban.preprocess.stl2geo \\
+        -stl_dir ./data/ -stl_basename grid_of_cubes \\
+        -output_path ./output/ -wind_direction 0
+"""
 from __future__ import print_function, division
-##
+
 import mpi4py
 mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
 import csv
 import os, re, glob, subprocess, numpy as np
-from gmtry_utils import geometrical_magnitudes, save_scalarfield, plane_generation, calculate_bounding_box, append_UV_features, move_stl_to_origin, rotate_geometry,append_UV_features
-from opt_gpu_gmtry_utils import geometrical_data_extractor_gpu,geometrical_magnitudes_gpu
+from flick_urban.preprocess.geometry import (
+    geometrical_magnitudes, save_scalarfield, plane_generation,
+    calculate_bounding_box, append_UV_features, move_stl_to_origin,
+    rotate_geometry,
+)
+from flick_urban.preprocess.gpu_geometry_opt import (
+    geometrical_data_extractor_gpu, geometrical_magnitudes_gpu,
+)
 import pyQvarsi
 from stl import mesh
 import shutil
@@ -22,18 +39,15 @@ mpi_size = mpi_comm.Get_size()
 
 # Folders & files
 STL_DIR = './'
-STL_BASENAME = 'bcn_2200'
+STL_BASENAME = 'grid_of_cubes'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0
 DIST_RESOLUTION = 1
 
 # Parameters
-# Wind direction each 22.5 degrees
-# <<<<<<< Updated upstream
-WIND_DIRECTION =  0.0 
-# WIND_DIRECTION =  [112.5, 135, 157.5, 180, 202.5, 225, 247.5, 270, 292.5, 315, 337.5] 
-# >>>>>>> Stashed changes
+# Wind direction in degrees (0 = wind from south, i.e. geometry faces north)
+WIND_DIRECTION = 0.0
 STL_ROT_ANGLE = [0.0, 0.0, 0.0]
 STEP_SIZE = 640 # Size of the domain in meters
 PX_RESOLUTION = 0.25 # Resolution in meters
@@ -58,6 +72,11 @@ def get_args():
     parser.add_argument('-batch_size', type=int, default=4092, help='batch size for data loading')
     args, _ = parser.parse_known_args()
     return args
+
+def _angle_str(a):
+    """Format angle as int string when a whole number, else as float string."""
+    return str(int(a)) if float(a) == int(float(a)) else str(a)
+
 
 if __name__ == "__main__":
     args = get_args()
@@ -92,7 +111,7 @@ if __name__ == "__main__":
             os.makedirs(POST_DIR_MAIN, exist_ok=True)
 
         for wind_angle in WIND_DIRECTION:
-            POST_DIR = os.path.join(POST_DIR_MAIN, f'output{wind_angle}-{STL_BASENAME}/')
+            POST_DIR = os.path.join(POST_DIR_MAIN, f'output{_angle_str(wind_angle)}-{STL_BASENAME}/')
             # rmtree sólo si existe
             if os.path.exists(POST_DIR):
                 shutil.rmtree(POST_DIR)
@@ -105,7 +124,7 @@ if __name__ == "__main__":
 
     for wind_angle in WIND_DIRECTION:
         pyQvarsi.pprint(0, f'Starting processing for wind direction: {wind_angle}', flush=True)
-        POST_DIR = os.path.join(POST_DIR_MAIN, f'output{wind_angle}-{STL_BASENAME}/')
+        POST_DIR = os.path.join(POST_DIR_MAIN, f'output{_angle_str(wind_angle)}-{STL_BASENAME}/')
         rotated_stl_basename = STL_BASENAME  # To avoid changing the original base name
 
         if mpi_rank == 0:

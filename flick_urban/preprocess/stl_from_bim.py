@@ -1,3 +1,15 @@
+"""
+stl_from_bim.py — IFC/BIM to STL conversion.
+
+Extracts building geometry from IFC files (``IfcBuildingElementProxy`` entities)
+and exports a combined, simplified STL mesh with all building bases at z=0.
+
+Requires: ifcopenshell, trimesh  (``pip install ifcopenshell trimesh``)
+
+Example
+-------
+    python -m flick_urban.preprocess.stl_from_bim
+"""
 import ifcopenshell
 import ifcopenshell.geom
 import re
@@ -67,7 +79,8 @@ def export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_paths, outpu
     else:
         print("No matching IfcBuildingElementProxy entities found in the provided files.")
 
-# Usage example
-ifc_file_paths = ["/content/left.ifc", "/content/right.ifc"]
-output_stl_path = '/content/combined_output_UPC.stl'
-export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_paths, output_stl_path, target_fraction=0.5)
+if __name__ == '__main__':
+    # Example: export two IFC building files to a combined STL
+    ifc_file_paths = ['building_a.ifc', 'building_b.ifc']
+    output_stl_path = 'combined_buildings.stl'
+    export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_paths, output_stl_path, target_fraction=0.5)

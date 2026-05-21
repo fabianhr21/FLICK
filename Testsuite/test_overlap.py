@@ -1,18 +1,10 @@
-import importlib.util
-import sys
-import types
-import os
 import numpy as np
+from flick_urban.postprocess.overlap import overlap_matrix
 
 
 def test_overlap_matrix():
-    sys.modules['STL2GeoTool_loop'] = types.SimpleNamespace(WIND_DIRECTION=[0], p_overlap=0.5)
-    spec = importlib.util.spec_from_file_location('overlap', os.path.join('flick_urban', 'postprocess', 'overlap.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
     matrices = [np.full((2, 2), i) for i in range(1, 5)]
-    result = module.overlap_matrix(
+    result = overlap_matrix(
         matrices,
         N_points=2,
         step=1,

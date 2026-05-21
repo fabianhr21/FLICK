@@ -1,9 +1,21 @@
+"""
+flick_urban.preprocess.geometry — Geometric operations on STL meshes.
+
+Provides rotation, translation, bounding-box calculation, wall-distance
+computation, and plane-mesh generation used throughout the FLICK pipeline.
+
+Example
+-------
+>>> from flick_urban.preprocess.geometry import calculate_bounding_box
+>>> mn, mx = calculate_bounding_box('Examples/preprocess/data/grid_of_cubes.stl')
+>>> print(mn, mx)   # [0. 0. 0.] [390. 390.  30.]
+"""
 from __future__ import print_function, division
 
-import mpi4py 
+import mpi4py
 mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
-##
+
 from stl import mesh
 import numpy as np
 import math
@@ -361,6 +373,42 @@ def rotation_matrix_around_z(theta_deg, convention="dataset"):
                   [s,  c, 0.0],
                   [0.0, 0.0, 1.0]], dtype=np.float64)
     return R
+
+
+def rotate_stl(triangles, angle_xyz, displ=None):
+    """Rotate a (N, 3, 3) triangle array around Z by angle_xyz[2] degrees.
+
+    Used by GPU geometry extractors to orient STL triangles in memory before
+    computing MASK/HEGT/WDST features.
+
+    Parameters
+    ----------
+    triangles : np.ndarray, shape (N, 3, 3)
+    angle_xyz : sequence of 3 floats — rotation angles [θx, θy, θz] in degrees.
+                Only θz (index 2) is applied.
+    displ     : unused, kept for signature compatibility.
+
+    Returns
+    -------
+    np.ndarray, shape (N, 3, 3) — rotated triangles.
+    """
+    R = rotation_matrix_around_z(angle_xyz[2], convention="math")
+    return np.einsum('ij,...j->...i', R, triangles)
+
+
+def move_stl(triangles, displ):
+    """Translate a (N, 3, 3) triangle array by a displacement vector.
+
+    Parameters
+    ----------
+    triangles : np.ndarray, shape (N, 3, 3)
+    displ     : sequence of 3 floats — [dx, dy, dz]
+
+    Returns
+    -------
+    np.ndarray, shape (N, 3, 3) — translated triangles.
+    """
+    return triangles + np.array(displ, dtype=np.float64)
 
 
 def rotate_geometry(stl_path, output_path, angle_deg, *,

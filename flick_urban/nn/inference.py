@@ -1,30 +1,29 @@
-#!/bin/env python
-#
-# model inference script
+"""
+inference.py — Run a trained Generator2D model on preprocessed HDF5 data.
 
+Loads a ``.pt`` checkpoint, reads HDF5 feature maps produced by stl2geo.py,
+and writes U/V wind field predictions as CSV and PNG files.
+
+Usage
+-----
+    python -m flick_urban.nn.inference \\
+        -dataset_base_path ./output/ -data_sample_basename grid_of_cubes \\
+        -model_loading_path ./checkpoints/ -model_basename generator
+"""
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from torch import nn
 import numpy as np
 import argparse
-import string
 import matplotlib.pyplot as plt
-import os, h5py,glob
-# from Models import UNet_wind
-from Models import Generator2D
-from Models  import ResidualBlock2D,Discriminator
-import sys
-sys.path.append('../pre-process/')
-import STL2GeoTool
+import os, h5py, glob
+from flick_urban.nn.models import Generator2D, ResidualBlock2D, Discriminator
 
 
-BASE_FOLDER='./'
-
-
-DATASET_BASE_PATH='../pre-process/output'
+DATASET_BASE_PATH = './output/'
 OUTPUT_PATH = './output/'
-DATA_SAMPLE_BASENAME='sanjeronimo'
+DATA_SAMPLE_BASENAME = 'grid_of_cubes'
 MODEL_BASENAME='generator'
 # MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/serial_batch1/'
 MODEL_LOADING_PATH= './'
@@ -137,7 +136,7 @@ def load_input_sample(args,file_path):
     E_features=np.empty((len(args.e_features),args.target_xdim,args.target_ydim),dtype=float)
 
     for idx,key in enumerate(args.e_features):
-        #print(f'reading {key} var')UPCNord_geometry],dtype = float) 
+        # read extra feature
         
         new_feature=np.reshape(target_data,(args.target_xdim,args.target_ydim), order='C')
         new_feature=np.flip(new_feature,axis=0)
@@ -156,10 +155,11 @@ def load_input_sample(args,file_path):
 
     return X_features, {'y':Y_features,'extra':E_features}
 
-def get_args():
+def get_args(argv=None):
     """
     These arguments can be passed with "$ python train.py -<arg_name> <arg_value>",
     otherwise it used their CONSTANTS value by default.
+    Pass argv=[] to get pure defaults without reading sys.argv.
     """
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
     ####DATASET PARAMETERS-------------------------------------------------------------------------------------------------------------------
@@ -181,8 +181,9 @@ def get_args():
     parser.add_argument('-scaling_y', type=float, default=SCALING_Y ,help='whole dataset target max value to normalize output data into a [-1,1] range')
     parser.add_argument('-num_res_blocks', type=int, default=32, help='number of residual blocks in the generator model')
     parser.add_argument('-verbose', type=int, default=VERBOSE, help='verbose level (0,1,2). 0: none. 1: text. 2: text and plots')
+    parser.add_argument('-wind_direction', type=float, default=0.0, help='wind direction angle in degrees')
 
-    args, _ = parser.parse_known_args()
+    args, _ = parser.parse_known_args(argv)
     return args
 
 if __name__ == '__main__':
@@ -199,7 +200,7 @@ if __name__ == '__main__':
     if device not in ['cpu','cuda:0']: device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f'used device={device}')   
 
-    for wind_angle in [STL2GeoTool.WIND_DIRECTION]:
+    for wind_angle in [args.wind_direction]:
         # args.data_sample_basename = DATA_SAMPLE_BASENAME
         dataset_folder = f"{args.dataset_base_path}/output{wind_angle}-{DATA_SAMPLE_BASENAME}/"
         output_folder = f"{args.output_path}/output{wind_angle}-{DATA_SAMPLE_BASENAME}/" 

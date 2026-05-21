@@ -1,11 +1,16 @@
-# geometrical_gpu.py
+"""
+gpu_geometry.py — Legacy GPU geometry extractor.
+
+.. deprecated::
+    Superseded by ``gpu_geometry_opt.py`` which uses vectorised CuPy kernels
+    and robust perimeter tracing.  Kept for reference only.
+"""
 import cupy as cp
 import numpy as np
 from mpi4py import MPI
 import pyQvarsi
 from stl import mesh
-import numpy as np
-from gmtry_utils import rotate_stl, move_stl
+from flick_urban.preprocess.geometry import rotate_stl, move_stl
 from scipy.spatial import cKDTree
 
 
@@ -37,7 +42,7 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
     h_triangles_gpu = cp.array(horizontal_triangles, dtype=cp.float32)
     h_triangles_gpu[:, :, 2] = 0.0  # ya en GPU
 
-    # Generar perímetro (en CPU)
+    # Build perimeter on CPU
     perimeter = []
     for tri in vertical_triangles:
         v1, v2 = np.zeros(3), np.zeros(3)
@@ -59,7 +64,7 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
             perimeter.append(v2)
     perimeter_gpu = cp.array(perimeter,dtype=cp.float32)
 
-    # Plano de puntos
+    # Flatten point cloud to XY plane
     points = np.copy(target_mesh)
     points[:, 2] = 0.0
 
@@ -89,7 +94,7 @@ def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, vertical_t
         if mask_L[idx]==1:
                 distance_L[idx]=wall_distance_gpu(p,perimeter_gpu)
 
-    # Reducir entre procesos
+    # Gather from all MPI ranks
     recv_mask = mpi_comm.allgather(mask_L)
     recv_height = mpi_comm.allgather(height_L)
     recv_buff_distance = mpi_comm.allgather(distance_L)
@@ -145,9 +150,6 @@ def geometrical_magnitudes_gpu(STL_FILE, target_mesh, stl_angle=[0.0, 0.0, 0.0],
     vertical_mask = (count_z_near_zero >= 2) & (count_z_near_zero < 3)
     vertical_triangles = triangles[vertical_mask]
     
-    # import cupy as cp
-
-
     # Run GPU extractor
     return geometrical_data_extractor_gpu(
         target_mesh,

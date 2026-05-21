@@ -10,11 +10,11 @@ import math
 import os
 
 deck = constants.OPENFOAM
-case = "295-120"
-city = "BARCELONA/"
-output_path = "/home/fabianh/GEO_CASES/" + city + case + "/output/"
+case = "test"
+city = "test/"
+output_path = "/home/fabianh/GEO_CASES/BARCELONA/"  + case + "/output/"
 output_name = case +"_Buildings"
-mn5_geo_path = "/home/fabianh/GEO_CASES/" + city + case + "/output/MN5/" + case + "_Buildings.geo"
+mn5_geo_path = "/home/fabianh/GEO_CASES/" + case + "/output/MN5/" + case + "_Buildings.geo"
 # distance = -3200 # Precursor length spanwise
 
 def splitTOhexa():

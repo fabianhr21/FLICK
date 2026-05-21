@@ -626,7 +626,7 @@ def main():
         print(f"Polyprep failed ({e}). Using raw OSM file for config.")
         polyprep_geojson = buildings_geojson
 
-    # --- NEW: Generate CITY4CFD Configuration ---
+    # --- Generate CITY4CFD Configuration ---
     create_city4cfd_config(
         output_dir=args.output_dir,
         center_point=center_point,

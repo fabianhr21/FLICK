@@ -1,11 +1,20 @@
+"""
+utils.py — CFD field averaging and interpolation utilities.
+
+Helper functions for reading, averaging, and interpolating pyQvarsi field
+outputs from high-fidelity LES simulations (e.g. SOD2D).
+
+Note: this module uses ``pyQvarsi`` (imported as ``pyAlya`` for legacy
+compatibility with older pipeline scripts).
+"""
 from __future__ import print_function, division
 
-import mpi4py 
+import mpi4py
 mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
 
 import os, re, glob, subprocess, math, numpy as np
-import pyAlya
+import pyQvarsi as pyAlya  # pyAlya is the legacy name for pyQvarsi
 
 import torch
 import torch.nn.functional as F

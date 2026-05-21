@@ -1,3 +1,9 @@
 [submodule "City4CFD"]
 	path = City4CFD
 	url = https://github.com/tudelft3d/City4CFD.git
+
+[submodule "City4CFD/cgal-6.0.1"]
+	path = City4CFD/cgal-6.0.1
+	url = https://github.com/CGAL/cgal.git
+	branch = CGAL-6.0.1
+	shallow = true

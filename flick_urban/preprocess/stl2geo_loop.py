@@ -1,12 +1,26 @@
-# STL2GeoTool_loop.py
+"""
+stl2geo_loop.py — CPU-only preprocessing script (no GPU path).
+
+Loops over a spatial tiling of the domain and generates HDF5 feature maps
+for each tile. Use stl2geo.py for the GPU-accelerated version.
+
+Usage
+-----
+    mpirun -n 4 python -m flick_urban.preprocess.stl2geo_loop \\
+        -stl_dir ./data/ -stl_basename grid_of_cubes -output_path ./output/
+"""
 from __future__ import print_function, division
-##
+
 import mpi4py
 mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
 import csv
 import os, re, glob, subprocess, numpy as np
-from gmtry_utils import geometrical_magnitudes, save_scalarfield, plane_generation, calculate_bounding_box, append_UV_features, move_stl_to_origin, rotate_geometry
+from flick_urban.preprocess.geometry import (
+    geometrical_magnitudes, save_scalarfield, plane_generation,
+    calculate_bounding_box, append_UV_features, move_stl_to_origin,
+    rotate_geometry,
+)
 import pyQvarsi
 from stl import mesh
 import shutil
@@ -18,7 +32,7 @@ mpi_size = mpi_comm.Get_size()
 
 # Folders & files
 STL_DIR = './'
-STL_BASENAME = 'UPCNord_geometry'
+STL_BASENAME = 'grid_of_cubes'
 POST_DIR_MAIN = './output/'
 
 STL_SCALE = 1.0

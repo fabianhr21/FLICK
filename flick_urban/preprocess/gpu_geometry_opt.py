@@ -1,19 +1,26 @@
+"""
+gpu_geometry_opt.py — Optimised GPU geometry extractor (production).
+
+Uses vectorised CuPy kernels and robust graph-based perimeter tracing to
+compute MASK, HEGT, and WDST feature maps from STL triangle meshes.
+Supersedes the legacy ``gpu_geometry.py``.
+"""
 import cupy as cp
 import numpy as np
 from mpi4py import MPI
 import pyQvarsi
 from stl import mesh
-# numpy.mesh is part of stl, no need to import again if using py-stl
-from gmtry_utils import rotate_stl, move_stl
+from flick_urban.preprocess.geometry import rotate_stl, move_stl
 from scipy.spatial import cKDTree
 from scipy.ndimage import label
 from collections import defaultdict
+from matplotlib.path import Path
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
-# --- Robust Perimeter Tracing (Unchanged) ---
+# --- Robust Perimeter Tracing ---
 HASH_PRECISION = 8  # 8 decimal places for vertex hashing
 
 def hash_vertex(v):
@@ -184,57 +191,7 @@ def isIn_gpu_vectorized(points_gpu, triangles_gpu):
     
     return tri_idx
 
-# --- Data Extractor (Optimized) ---
-import cupy as cp
-import numpy as np
-from mpi4py import MPI
-import pyQvarsi
-from stl import mesh
-# numpy.mesh is part of stl, no need to import again if using py-stl
-from gmtry_utils import rotate_stl, move_stl
-from scipy.spatial import cKDTree
-from scipy.ndimage import label
-from collections import defaultdict
-from matplotlib.path import Path # <<< NEW IMPORT FOR ROOF-PERIMETER MAPPING
-
-mpi_comm = MPI.COMM_WORLD
-mpi_rank = mpi_comm.Get_rank()
-mpi_size = mpi_comm.Get_size()
-
-# --- Robust Perimeter Tracing (Unchanged) ---
-# ... (hash_vertex and extract_and_trace_perimeters) ...
-# (Assuming these functions are defined elsewhere or above this)
-
-# --- OPTIMIZED: Vectorized Utility Functions (Unchanged) ---
-# ... (wall_distance_gpu_vectorized and isIn_gpu_vectorized) ...
-# (Assuming these functions are defined elsewhere or above this)
-
-
-# --- Data Extractor (MODIFIED) ---
-import cupy as cp
-import numpy as np
-from mpi4py import MPI
-import pyQvarsi
-from stl import mesh
-# numpy.mesh is part of stl, no need to import again if using py-stl
-from gmtry_utils import rotate_stl, move_stl
-from scipy.spatial import cKDTree
-from scipy.ndimage import label
-from collections import defaultdict
-from matplotlib.path import Path # Required import
-
-mpi_comm = MPI.COMM_WORLD
-mpi_rank = mpi_comm.Get_rank()
-mpi_size = mpi_comm.Get_size()
-
-# --- Robust Perimeter Tracing (Unchanged) ---
-# ... (Assuming hash_vertex and extract_and_trace_perimeters are present)
-
-# --- OPTIMIZED: Vectorized Utility Functions (Unchanged) ---
-# ... (Assuming wall_distance_gpu_vectorized and isIn_gpu_vectorized are present)
-
-
-# --- Data Extractor (MODIFIED) ---
+# --- Data Extractor ---
 def geometrical_data_extractor_gpu(target_mesh, horizontal_triangles, 
                                    all_perimeter_vertices, 
                                    dist_resolution, batch_size, grid_dims_Nx=None, grid_dims_Ny=None):
