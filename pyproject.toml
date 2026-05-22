@@ -16,9 +16,9 @@ authors = [
     {name = "Oriol Lehmkul"},
     {name = "Ivette Rodríguez"},
 ]
-keywords = ["urban wind", "CFD", "neural network", "UNet", "urban climate", "BSC"]
+keywords = ["urban wind", "CFD", "neural network", "UNet", "urban climate", "wind modelling"]
 classifiers = [
-    "Development Status :: v1.0",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -39,7 +39,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["torch>=1.12"]
+gpu  = ["torch>=1.12"]
+hpc  = ["mpi4py"]
+dev  = ["pytest"]
+docs = ["sphinx", "sphinx-rtd-theme", "myst-parser", "sphinx-autodoc-typehints"]
 
 [project.urls]
 Homepage = "https://github.com/fabianhr21/FLICK"

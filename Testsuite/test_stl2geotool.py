@@ -17,7 +17,8 @@ def test_STL2GeoTool_gpu(tmp_path):
     m = mesh.Mesh(data)
     stl_path = tmp_path / 'cube.stl'
     m.save(str(stl_path))
-    cwd = os.getcwd()
+    # Use repo root derived from __file__, not os.getcwd(), so test works from any CWD
+    cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(tmp_path)
 
     # stub mpi4py

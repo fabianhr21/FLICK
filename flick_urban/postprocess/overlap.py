@@ -18,7 +18,8 @@ import re
 from PIL import Image
 import argparse
 
-def get_args():
+def get_args(argv=None):
+    """Parse CLI arguments for the overlap post-processing script."""
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
     parser.add_argument('-overlap', type=float, default=0.5, help='overlap percentage')
     parser.add_argument('-N_points', type=int, default=256, help='number of points in the output matrix')
@@ -33,7 +34,8 @@ def get_args():
     args, _ = parser.parse_known_args()
     return args
 
-def save_matrix_as_image(matrix, output_file,colormap='magma'):
+def save_matrix_as_image(matrix, output_file, colormap='magma'):
+    """Normalise *matrix* to [0,1], apply *colormap*, and save as a PNG image."""
     # Normalize matrix values to 0-1
     normalized_matrix = (matrix - np.min(matrix)) / (np.max(matrix) - np.min(matrix))
 
@@ -49,23 +51,26 @@ def save_matrix_as_image(matrix, output_file,colormap='magma'):
     print(f"Image saved as {output_file}")
 
 def save_image(field, output_file, colormap='magma'):
-        plt.figure(figsize=(10, 10))
-        plt.imshow(field,cmap='magma')
-        plt.colorbar()
-        plt.title('Wind Speed (m/s)')
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.show()
-        plt.savefig(output_file)
-        plt.close()
+    """Plot *field* with colorbar and save as a labelled PNG (wind speed figure)."""
+    plt.figure(figsize=(10, 10))
+    plt.imshow(field, cmap='magma')
+    plt.colorbar()
+    plt.title('Wind Speed (m/s)')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.show()
+    plt.savefig(output_file)
+    plt.close()
 
 def extract_upc_number(filename):
+    """Extract the numeric index from a filename like 'sample-3-geodata.h5' → 3."""
     match = re.search(r'-(\d+)', filename)
     if match:
         return int(match.group(1))
     return float('inf')  # If no number is found, place it at the end
 
 def read_output_files(output_dir, keyword):
+    """Read all CSV matrices in *output_dir* whose filename contains *keyword*, sorted by index."""
     sorted_list = sorted(os.listdir(output_dir), key=extract_upc_number)
     # Read the output files in one array
     matrix = []
@@ -75,15 +80,14 @@ def read_output_files(output_dir, keyword):
                 data = np.genfromtxt(f, delimiter=',')
                 matrix.append(data)
             f.close()
-    # complete_matrix = np.zeros((y_dir, x_dir))
-    # n = 0
-    # for i in range(y_dir - N_points, -1, -N_points):
-    #     for j in range(0, x_dir, N_points):
-    #         complete_matrix[i:i + N_points, j:j + N_points] = matrix[n]
-    #         n += 1
-    return matrix #, complete_matrix  # Complete matrix is the matrix with all the frames, only visualization purposes
+    return matrix
 
 def interpolate(matrix1, matrix2, overlap, axis, factor=1):
+    """Blend overlapping edge of *matrix1* with *matrix2* using exponential-decay weights.
+
+    axis : 'horizontal' (blend left columns) or 'vertical' (blend bottom rows).
+    factor : decay rate — higher = sharper transition.
+    """
     # Generate the interpolation weights using an exponential decay function
     alpha = np.linspace(0, 1, overlap)
     weights = np.exp(-alpha * factor)  # Adjust the factor to control the decay rate
@@ -98,7 +102,8 @@ def interpolate(matrix1, matrix2, overlap, axis, factor=1):
             matrix1[-overlap + i, :] = matrix1[-overlap + i, :] * weight + matrix2[i, :] * (1 - weight)
         return matrix1
 
-def overlap_matrix(matrix, N_points, step, overlap, y_dir, x_frames,x_factor,y_factor):
+def overlap_matrix(matrix, N_points, step, overlap, y_dir, x_frames, x_factor, y_factor):
+    """Stitch a list of N_points×N_points tile predictions into a full y_dir × (x_frames*step+N_points) field."""
     combined_matrix = np.zeros((y_dir, step * x_frames + N_points))
     memory = []
     n = 0
@@ -119,13 +124,15 @@ def overlap_matrix(matrix, N_points, step, overlap, y_dir, x_frames,x_factor,y_f
         row += 1
     return combined_matrix
 
-def vel_magNdir(U, V,W=0):
+def vel_magNdir(U, V, W=0):
+    """Return (VMAG, VDIR2D) — velocity magnitude and 2-D direction (radians) from U, V [, W] components."""
     VMAG = np.sqrt(U**2 + V**2 + W**2)
     VDIR2D = np.arctan2(V,U)
     
     return VMAG, VDIR2D
 
 def remove_empty_lines(matrix):
+    """Crop zero-only rows from the top and zero-only columns from the right of *matrix*."""
     if not np.any(matrix):
         return np.array([[]])
 
@@ -138,6 +145,7 @@ def remove_empty_lines(matrix):
 
 
 def read_global_vars(DIR):
+    """Read x_frames and y_frames from *DIR*/global_vars.txt written by stl2geo.py."""
     global_vars = {}
     with open(DIR + 'global_vars.txt', 'r') as f:
         for line in f:

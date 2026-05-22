@@ -29,8 +29,8 @@ mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
-def plane_generation(Length,nx,ny):
-
+def plane_generation(Length, nx, ny):
+	"""Generate a 2D structured plane mesh spanning [-Length, Length]^2 with nx*ny points."""
 	# Generate partition table
 	ptable = pyQvarsi.PartitionTable.new(1,nelems=(nx-1)*(ny-1),npoints=nx*ny)
 
@@ -45,8 +45,8 @@ def plane_generation(Length,nx,ny):
 	# Generate plane mesh
 	return pyQvarsi.MeshAlya.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,compute_massMatrix=False)
 
-def solid_perimeter_generation(triangles,dist_resolution) -> None:
-
+def solid_perimeter_generation(triangles, dist_resolution):
+        """Sample points along ground-level edges of vertical triangles to form a solid perimeter."""
         perimeter=[]
         for tri in triangles:
                 v1=np.zeros(3)
@@ -77,8 +77,8 @@ def solid_perimeter_generation(triangles,dist_resolution) -> None:
 
         return np.array(perimeter)
 
-def geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangles,dist_resolution):
-
+def geometrical_data_extractor(target_mesh, horizontal_triangles, vertical_triangles, dist_resolution):
+        """CPU MPI extractor: compute MASK, HEGT, WDST fields over target_mesh from STL triangles."""
         h_triangles=np.copy(horizontal_triangles)
         h_triangles[:,:,2]=0
         
@@ -131,15 +131,15 @@ def geometrical_data_extractor(target_mesh,horizontal_triangles,vertical_triangl
 
         return fields
 
-def wall_distance(point,perimeter):
-
+def wall_distance(point, perimeter):
+        """Return minimum Euclidean distance from *point* to any vertex in *perimeter*."""
         point_vec=np.tile(point,(perimeter.shape[0],1))
 
         dist=np.linalg.norm(perimeter-point_vec,axis=1)
         return np.amin(dist)
 
-def isIn(point,triangles):
-
+def isIn(point, triangles):
+        """Return index of first triangle containing *point* (area test), or -1 if none."""
         point_vec=np.tile(point,(triangles.shape[0],1))
 
         v0 =triangles[:,0,:] 
@@ -169,6 +169,7 @@ def save_scalarfield(plane,filename):
 
 
 def display_points(points):
+        """Scatter-plot a (N, 3) point array in 3-D."""
         x=points[:,0]
         y=points[:,1]
         z=points[:,2]
@@ -194,8 +195,7 @@ def display_points_plane(points,plane):
         plt.show()
 
 def display_stl(mesh):
-        # Create a new plot
-
+        """Render an STL mesh as a 3-D polygon collection."""
         figure = plt.figure()
         axes = figure.add_subplot(projection='3d')
         axes.add_collection3d(mplot3d.art3d.Poly3DCollection(mesh.vectors))
@@ -207,56 +207,13 @@ def display_stl(mesh):
         plt.show()
 
 def display_triangles(triangles):
+        """Flatten (N, 3, 3) triangle array to points and display with display_points."""
         points=triangles.reshape(triangles.shape[0]*3,-1)
         display_points(points)
 
 
-        
-def rotate_stl(stl,angles,center=np.array([0, 0, 0])):
-        
-		alpha = math.pi*angles[2]/180.0
-		beta  = math.pi*angles[1]/180.0
-		gamma = math.pi*angles[0]/180.0
-        
-		R = np.ndarray(shape=(3,3))
-        
-		R[0][0] = math.cos(alpha)*math.cos(beta)
-		R[1][0] = math.cos(alpha)*math.sin(beta)*math.sin(gamma)-math.sin(alpha)*math.cos(gamma)
-		R[2][0] = math.cos(alpha)*math.sin(beta)*math.cos(gamma)+math.sin(alpha)*math.sin(gamma)
-		R[0][1] = math.sin(alpha)*math.cos(beta)
-		R[1][1] = math.sin(alpha)*math.sin(beta)*math.sin(gamma)+math.cos(alpha)*math.cos(gamma)
-		R[2][1] = math.sin(alpha)*math.sin(beta)*math.cos(gamma)-math.cos(alpha)*math.sin(gamma)
-		R[0][2] = -math.sin(beta)
-		R[1][2] = math.cos(beta)*math.sin(gamma)
-		R[2][2] = math.cos(beta)*math.cos(gamma)
-
-		for tri, triangle in enumerate(stl):
-			centers=np.tile(center,(3,1))
-			stl[tri] = np.dot(triangle-centers,R)+centers
-		return stl
-
-def move_stl(stl,displacement=np.array([0, 0, 0])):
-		for tri, triangle in enumerate(stl):
-			displacements=np.tile(displacement,(3,1))
-			stl[tri] = triangle+displacements
-		
-		return stl
-
-def display_stl(mesh):
-        # Create a new plot
-
-        figure = plt.figure()
-        axes = figure.add_subplot(projection='3d')
-        axes.add_collection3d(mplot3d.art3d.Poly3DCollection(mesh.vectors))
-
-        # Auto scale to the mesh size
-        scale = mesh.points.flatten()
-        axes.auto_scale_xyz(scale, scale, scale)
-        # Show the plot to the screen
-        plt.show()
-
-def geometrical_magnitudes(STL_FILE,target_mesh,stl_angle=[0.0,0.0,0.0],stl_displ=[0.0,0.0,0.0],stl_scale=1.0,dist_resolution=1.0):
-                
+def geometrical_magnitudes(STL_FILE, target_mesh, stl_angle=[0.0,0.0,0.0], stl_displ=[0.0,0.0,0.0], stl_scale=1.0, dist_resolution=1.0):
+                """CPU path: load STL, classify triangles, extract MASK/HEGT/WDST fields over target_mesh."""
                 my_mesh = mesh.Mesh(np.concatenate([m.data for m in mesh.Mesh.from_multi_file(STL_FILE)]))
                 
                 triangles = stl_scale*my_mesh.vectors
@@ -292,6 +249,7 @@ def calculate_bounding_box(input_file):
     return min_coords, max_coords
 
 def append_UV_features(file_path, N_POINTS=256):
+    """Append placeholder U/V/GRDUX/GRDVY/GRDWZ datasets (ones) to an existing HDF5 geodata file."""
     with h5py.File(f"{file_path}-geodata.h5", 'r+') as file:
         input_xdim = N_POINTS
         input_ydim = N_POINTS
@@ -314,7 +272,7 @@ def append_UV_features(file_path, N_POINTS=256):
             file.create_dataset(dset, data=U)
 
 def move_stl_to_origin(stl_file, output_file):
-    # Load the STL file
+    """Translate STL mesh so its minimum bounding-box corner is at (0, 0, 0)."""
     original_mesh = mesh.Mesh.from_file(stl_file)
 
     # Get the minimum coordinates of the mesh
@@ -328,7 +286,7 @@ def move_stl_to_origin(stl_file, output_file):
     # print(f'Saved translated STL file to: {output_file}')
 
 def move_stl_to_origin_trimesh(input_file, output_file):
-    # Load the STL mesh
+    """Translate STL mesh to origin using trimesh (supports non-watertight meshes)."""
     mesh = trimesh.load_mesh(input_file, force='mesh')
 
     # Check for valid mesh

@@ -1,14 +1,22 @@
 #!/bin/bash
+# rbndivide_loop.sh — Loop RbNDivide over city directories and sync to HPC.
+#
+# Configure the variables below before use:
+#   REMOTE_USER  : your HPC username
+#   REMOTE_HOST  : HPC transfer node hostname
+#   REMOTE_BASE  : base path on HPC scratch
+#   DIR          : local directory containing city case folders
+#   ansa_path    : path to the ANSA executable
 
-DIR="/home/fabianh/GEO_CASES/round_2/"
-CITIES=("MADRID" "VALENCIA" "SEVILLA" "ZARAGOZA") # "BARCELONA" "MADRID"
-ansa_path=/home/fabianh/ANSA/BETA_CAE_Systems24.1/ansa_v24.1.2/ansa64.sh
-working_directory="/home/fabianh/FLICK_untouched/pre-process/geo4CFD/ANSA_SCRIPTS/"
+DIR="/path/to/GEO_CASES/"
+CITIES=("CITY_A" "CITY_B")
+ansa_path="/path/to/ansa64.sh"
+working_directory="/path/to/FLICK/flick_urban/preprocess/geo4cfd/ansa/"
 
-# MN5 setup
-REMOTE_USER="bsc084826"
-REMOTE_HOST="transfer1.bsc.es"
-REMOTE_BASE="/gpfs/scratch/upc76/fabian/sims_sod2d/GEO_CASES"
+# HPC setup — fill in your credentials
+REMOTE_USER="${FLICK_HPC_USER:-your_hpc_username}"
+REMOTE_HOST="${FLICK_HPC_HOST:-transfer.hpc.example.org}"
+REMOTE_BASE="${FLICK_HPC_SCRATCH:-/scratch/user/sims_sod2d/GEO_CASES}"
 SOCKET="/tmp/ssh_mux_${REMOTE_USER}_${REMOTE_HOST}"
 
 # Open a single SSH master connection (authenticates once)
@@ -20,27 +28,17 @@ until ssh -S "$SOCKET" -O check "${REMOTE_USER}@${REMOTE_HOST}" 2>/dev/null; do
 done
 echo "SSH master connection established."
 
-
-
 for city in "${CITIES[@]}"; do
-    for d in $DIR$city/*/ ; do
-        # Ignore __pycache__ directories
+    for d in $DIR$city/*/; do
         [[ "$d" == *"__pycache__"* ]] && continue
-        # echo "Processing directory: $d"
-    dirname=$(basename "$d")
-    buildings_file="${d}output/${dirname}_Buildings.ansa"
-    dimensions_file="${d}output/domain_dimensions.txt"
-    echo "Using buildings file: $buildings_file"
-    # echo "RUnning Path: '${d}output/'"
-    # $ansa_path -nogui -noopencl -execscript "${working_directory}args_RbNDivide.py|main('${buildings_file}','${d}output/','${city}/','${dirname}')"
-    SRC="${d}output/MN5/p3/WindFarmSolverIncomp.json"
-    echo "Sending MN5 directory to remote host: ${SRC}"
-    rsync --progress -e "ssh -S $SOCKET" -r "${SRC}" "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_BASE}/${city}/${dirname}/p3/"
-    # break
+        dirname=$(basename "$d")
+        buildings_file="${d}output/${dirname}_Buildings.ansa"
+        echo "Using buildings file: $buildings_file"
+        SRC="${d}output/MN5/p3/WindFarmSolverIncomp.json"
+        echo "Sending MN5 directory to remote host: ${SRC}"
+        rsync --progress -e "ssh -S $SOCKET" -r "${SRC}" \
+            "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_BASE}/${city}/${dirname}/p3/"
     done
 done
 ssh -S "$SOCKET" -O exit "${REMOTE_USER}@${REMOTE_HOST}"
 echo "All done. Closed SSH connection to ${REMOTE_HOST}."
-
-# FOr makinf the precursor and split2hexa
-#~/ANSA/BETA_CAE_Systems24.1/ansa_v24.1.2/ansa64.sh -nogui -noopencl -execscript "RbNDivide.py|main('/home/fabianh/GEO_CASES/BARCELONA/267-43/output/267-43_Buildings.ansa','267-43_Buildings','/home/fabianh/GEO_CASES/BARCELONA/267-43/output/')"

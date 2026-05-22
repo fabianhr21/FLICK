@@ -1,7 +1,0 @@
-gmsh_filePath "./"
-gmsh_fileName "{{BASENAME}}_Buildings_p2"
-mesh_h5_filePath "./"
-mesh_h5_fileName "{{BASENAME}}_Buildings_p2"
-num_partitions 4
-lineal_output 1
-eval_mesh_quality 1

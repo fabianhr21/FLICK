@@ -48,7 +48,8 @@ N_POINTS = 256
 p_overlap = 0.50
 overlap = int(2 * STEP_SIZE * p_overlap)
 
-def get_args():
+def get_args(argv=None):
+    """Parse CLI arguments for the stl2geo_loop CPU preprocessing script."""
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
     parser.add_argument('-dataset_path', default=STL_DIR, help='dataset folder name.')
     parser.add_argument('-stl_basename', default=STL_BASENAME, help='input dataset files base name')

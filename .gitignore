@@ -42,3 +42,8 @@ ENV/
 *.log
 *.tmp
 *.dmp
+
+# Presentation files (store in Drive/Zenodo, not the repo)
+results/*.pdf
+results/*.pptx
+results/*.ppt

@@ -18,6 +18,14 @@ import numpy as np
 import os
 
 def export_specific_ifcbuildingelementproxy_to_stl_with_z0(ifc_file_paths, output_stl_path, target_fraction=0.5):
+    """Export IfcBuildingElementProxy entities from IFC files to a combined STL with bases at z=0.
+
+    Parameters
+    ----------
+    ifc_file_paths  : list of str — paths to IFC input files
+    output_stl_path : str — path for the output STL file
+    target_fraction : float — mesh simplification target (fraction of original faces, default 0.5)
+    """
     # Initialize the settings for the geometry processing
     settings = ifcopenshell.geom.settings()
     settings.set(settings.USE_WORLD_COORDS, True)

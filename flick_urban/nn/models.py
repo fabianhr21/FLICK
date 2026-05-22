@@ -30,6 +30,7 @@ class ResidualBlock2D(nn.Module):
                 nn.init.xavier_normal_(layer.weight)
 
     def forward(self, x):
+        """Apply two conv layers and add residual skip connection."""
         residual = x
         out = self.conv1(x)
         out = self.bnorm(out)
@@ -73,11 +74,13 @@ class Generator2D(nn.Module):
         self.reset_parameters(self.modules())
 
     def reset_parameters(self, m) -> None:
+        """Initialise Conv2d weights with Xavier normal distribution."""
         for layer in m:
             if isinstance(layer, nn.Conv2d):
                 nn.init.xavier_normal_(layer.weight)
 
     def forward(self, x):
+        """Encode, apply residual blocks, decode, and return sigmoid output."""
         x1 = self.prelu1(self.conv1(x))
         d1 = self.prelu_down1(self.down1(x1))
         r = self.residual_blocks(d1)
@@ -119,11 +122,13 @@ class Discriminator(nn.Module):
         self.reset_parameters(self.modules())
 
     def reset_parameters(self, m) -> None:
+        """Initialise Conv2d weights with normal(0, 0.02) — pix2pix convention."""
         for layer in m:
             if isinstance(layer, nn.Conv2d):
                 nn.init.normal_(layer.weight, mean=0.0, std=0.02)
 
     def forward(self, x):
+        """Apply 4-layer strided convolutions and return raw patch logits."""
         x = self.LeakyReLU(self.conv2D_input_64(x))
         x = self.LeakyReLU(self.BatchNorm_128(self.conv2D_64_128(x)))
         x = self.LeakyReLU(self.BatchNorm_256(self.conv2D_128_256(x)))

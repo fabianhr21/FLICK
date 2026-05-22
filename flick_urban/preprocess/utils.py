@@ -25,14 +25,15 @@ mpi_rank = mpi_comm.Get_rank()
 mpi_size = mpi_comm.Get_size()
 
 def read_instants(CASEDIR):
+	"""Return sorted list of time-step integers found in CASEDIR AVVEL post files."""
 	steps = []
 	for file in glob.glob(CASEDIR+"*AVVEL*post*"):
 		steps.append(int(re.split('[- .]',file)[-4]))
 	steps.sort()
 	return steps
 
-def averaging(instants,mesh,VARLIST,CASEDIR,CASESTR):
-
+def averaging(instants, mesh, VARLIST, CASEDIR, CASESTR):
+	"""Time-weighted average of velocity field over *instants* using Welford's online algorithm."""
 	# Read the first instant of the list
 	_, header = pyAlya.Field.read(CASESTR,VARLIST,instants[0],mesh.xyz,basedir=CASEDIR)
 
@@ -51,8 +52,8 @@ def averaging(instants,mesh,VARLIST,CASEDIR,CASESTR):
 
 	return avgField, time 
 
-def averaging2(instants,mesh,VARLIST,CASEDIR,CASESTR):
-
+def averaging2(instants, mesh, VARLIST, CASEDIR, CASESTR):
+	"""Simple time-weighted average over *instants* for AVVEL and AVPRE fields."""
 	# Read the first instant of the list
 	_, header = pyAlya.Field.read(CASESTR,VARLIST,instants[0],mesh.xyz,basedir=CASEDIR)
 
@@ -71,12 +72,12 @@ def averaging2(instants,mesh,VARLIST,CASEDIR,CASESTR):
 		total_time += dt
 	return avgField / total_time, total_time
 
-def plane_generation(Length,nx,ny):
-
+def plane_generation(Length, nx, ny):
+	"""Generate a 2D structured plane mesh (pyAlya/pyQvarsi variant)."""
 	# Generate partition table
 	ptable = pyAlya.PartitionTable.new(1,nelems=(nx-1)*(ny-1),npoints=nx*ny)
 
-	# Generate points
+	# Generate points (centred at origin, spanning [-Length, Length] in X and Y)
 	points = np.array([
 		[-Length,-Length,0.0],
 		[ Length,-Length,0.0],
@@ -84,38 +85,17 @@ def plane_generation(Length,nx,ny):
 		[-Length, Length,0.0]
 		],dtype='double')
 
-	# Generate plane mesh
-	#return pyAlya.Mesh.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,create_elemList=False)
-	#return pyAlya.Mesh.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable)
 	return pyAlya.Mesh.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,compute_massMatrix=False)
 
-'''
-def plane_generation(Length,nx,ny):
-
-	# Generate partition table
-	ptable = pyAlya.PartitionTable.new(1,nelems=(nx-1)*(ny-1),npoints=nx*ny)
-
-	# Generate points
-	points = np.array([
-		[0.0,0.0,0.0],
-		[Length,0.0,0.0],
-		[Length,Length,0.0],
-		[0.0,Length,0.0]
-		],dtype='double')
-
-	# Generate plane mesh
-	return pyAlya.Mesh.plane(points[0],points[1],points[3],nx,ny,ngauss=1,ptable=ptable,create_elemList=False)
-'''
-
-def meteo_fields(avgField,mesh):
-
+def meteo_fields(avgField, mesh):
+	"""Append GRAVZ (velocity gradient) and GRAPZ (pressure gradient) to *avgField*."""
 	# Compute the gradients of the velocity and the pressure
 	avgField['GRAVZ'] = mesh.gradient(avgField['AVVEL'])[:,[0,2,4,5,8]]
 	avgField['GRAPZ'] = mesh.gradient(avgField['AVPRE'])[:,2]
 	return avgField
 
-def fields_h5(int_xyz,mesh,avgField,target_mask,POSTDIR,metadata,basename,nanval=0.0):
-
+def fields_h5(int_xyz, mesh, avgField, target_mask, POSTDIR, metadata, basename, nanval=0.0):
+	"""Interpolate *avgField* onto *int_xyz* grid using FEM and mask out non-fluid cells."""
 	# Field generation
 	pyAlya.cr_start('fields_h5',0)
 
@@ -132,8 +112,8 @@ def fields_h5(int_xyz,mesh,avgField,target_mask,POSTDIR,metadata,basename,nanval
 	pyAlya.cr_stop('fields_h5',0)
 	return int_field
 
-def compute_u_grads(fields,N_POINTS,D_LENGTH):
-
+def compute_u_grads(fields, N_POINTS, D_LENGTH):
+	"""Compute GRDUX, GRDVY, GRDWZ (velocity divergence components) on an N_POINTS×N_POINTS grid."""
 	GRID_SPACING=(D_LENGTH*2)/(N_POINTS-1)
 
 	U=fields['AVVEL'][:,0]
@@ -198,7 +178,8 @@ def compute_u_grads(fields,N_POINTS,D_LENGTH):
 
 	return {'GRDUX':GRDUX,'GRDVY':GRDVY,'GRDWZ':GRDWZ}
 
-def supress_nans(fields,VARLIST):
+def suppress_nans(fields, VARLIST):
+	"""Replace NaN values in *fields[VARLIST]* with interpolated neighbour values."""
 
 	#print("fields shape=",fields)
 	#print("var=",VARLIST[0])

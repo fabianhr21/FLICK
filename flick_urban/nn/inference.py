@@ -24,9 +24,8 @@ from flick_urban.nn.models import Generator2D, ResidualBlock2D, Discriminator
 DATASET_BASE_PATH = './output/'
 OUTPUT_PATH = './output/'
 DATA_SAMPLE_BASENAME = 'grid_of_cubes'
-MODEL_BASENAME='generator'
-# MODEL_LOADING_PATH='/gpfs/scratch/bsc21/bsc084826/NN_project/training/WDST/checkpoints/serial_batch1/'
-MODEL_LOADING_PATH= './'
+MODEL_BASENAME = 'generator'
+MODEL_LOADING_PATH = './'
 INPUT_FEAT=['MASK','HEGT','WDST'] #having a MASK distinguishing solid and fluid regions at the first position is mandatory.
 TARGET_FEAT=['U','V']
 EXTRA_FEAT=[]
@@ -42,7 +41,8 @@ VERBOSE=2
 
 
 def plot_field(field, image_name, mask=None, vmin_cost=0.0, vmax_cost=0.0):
-    if torch.cuda.is_available(): 
+    """Save a 2-D tensor as a Spectral colormap image, optionally masked by *mask*."""
+    if torch.cuda.is_available():
         plot_matrix = torch.clone(field)
         if plot_matrix.requires_grad:
             plot_matrix = plot_matrix.detach()
@@ -55,7 +55,7 @@ def plot_field(field, image_name, mask=None, vmin_cost=0.0, vmax_cost=0.0):
             plot_matrix = plot_matrix.numpy()
 
     else:
-        # Aquí field es un tensor, conviértelo a numpy
+        # field is a tensor — convert to numpy
         if field.requires_grad:
             field = field.detach()
         plot_matrix = field.cpu().numpy()
@@ -75,9 +75,9 @@ def plot_field(field, image_name, mask=None, vmin_cost=0.0, vmax_cost=0.0):
     plt.savefig(image_name)
     plt.clf()
 
-def load_model(model,args):
-
-    model_path=f"{args.model_loading_path}{args.model_basename}.pt"
+def load_model(model, args):
+    """Load *model* weights from args.model_loading_path/args.model_basename.pt checkpoint."""
+    model_path = f"{args.model_loading_path}{args.model_basename}.pt"
 
     if not os.path.exists(model_path):
         print(f"The {model_path} file does not exist. Check file path and name.")
@@ -91,12 +91,8 @@ def load_model(model,args):
     model.eval()
     return model
 
-def load_input_sample(args,file_path):
-    #if not os.path.exists(f"{args.dataset_path}{args.data_sample_basename}-{idx}.h5"):
-    #    print(f"The file {args.dataset_path}{args.data_sample_basename}-{idx}.h5 does not exist")
-    #    exit(0)
-
-    #file_path=f"{args.dataset_path}{args.data_sample_basename}-{idx}.h5"
+def load_input_sample(args, file_path):
+    """Load HDF5 geodata file and return (X_features, {'y': Y_features, 'extra': E_features}) tensors."""
     print(f"Opening file {file_path}")
 
     data=h5py.File(file_path)        
@@ -196,9 +192,8 @@ if __name__ == '__main__':
     
     
 
-    device='null'
-    if device not in ['cpu','cuda:0']: device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print(f'used device={device}')   
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(f'used device={device}')
 
     for wind_angle in [args.wind_direction]:
         # args.data_sample_basename = DATA_SAMPLE_BASENAME

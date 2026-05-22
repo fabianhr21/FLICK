@@ -22,6 +22,7 @@ OUTPUT_PATH = './output/'
 
 
 def get_args(argv=None):
+    """Parse CLI arguments for the geolocate post-processing script."""
     parser = argparse.ArgumentParser(description='Georeference wind field predictions')
     parser.add_argument('-basename',       default=basename,      help='STL basename used in preprocessing')
     parser.add_argument('-dataset_path',   default=DATASET_PATH,  help='path to final_output directory')
@@ -33,7 +34,7 @@ def get_args(argv=None):
 
 
 def vel_magNdir(U, V, W=0):
-    """Compute velocity magnitude and 2-D direction from U, V components."""
+    """Return (VMAG, VDIR2D) — velocity magnitude and 2-D direction (radians)."""
     VMAG = np.sqrt(U**2 + V**2 + W**2)
     VDIR2D = np.arctan2(V, U)
     return VMAG, VDIR2D

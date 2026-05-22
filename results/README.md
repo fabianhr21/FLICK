@@ -1,5 +1,8 @@
-Until now, the wind neural network has demonstrated good accuracy in the dataset, as Calafell et al.<sup>1</sup>  describe in their publication. Furthermore, 
-The model has proven to be easy and adaptable to different geometries and contextual windows.
+> **Note:** Presentation slides and detailed result figures are available on request
+> (fabian.alexis.hernandez@upc.edu) and are not stored in this repository.
+
+Until now, the wind neural network has demonstrated good accuracy in the dataset, as Calafell et al.<sup>1</sup> describe in their publication. Furthermore,
+the model has proven to be easy and adaptable to different geometries and contextual windows.
 
 As part of the new extension of the research and applications, we have found that the Neural Network can make inferences on much bigger domains than 
 the ones it was trained on. As shown in the next picture.

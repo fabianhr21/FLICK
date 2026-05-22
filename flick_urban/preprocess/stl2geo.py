@@ -57,7 +57,8 @@ cx = 0.0  # Static center X coordinate
 cy = 0.0  # Static center Y coordinate
 cz = 0.0
 
-def get_args():
+def get_args(argv=None):
+    """Parse CLI arguments for the stl2geo preprocessing script."""
     parser = argparse.ArgumentParser(description='args for 2D H5 data samples training')
     parser.add_argument('-stl_dir', default=STL_DIR, help='dataset folder name.')
     parser.add_argument('-stl_basename', default=STL_BASENAME, help='input dataset files base name')
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     
     # CLEAR OR CREATE OUTPUT MAIN DIRECTORY FIRST
     if mpi_rank == 0:
-        # asegurar que POST_DIR_MAIN existe antes de intentar crear subdirs o rmtree
+        # ensure POST_DIR_MAIN exists before creating subdirs or calling rmtree
         if not os.path.exists(POST_DIR_MAIN):
             os.makedirs(POST_DIR_MAIN, exist_ok=True)
 
@@ -129,7 +130,7 @@ if __name__ == "__main__":
 
         if mpi_rank == 0:
             # print(f"N_POINTS: {N_POINTS}, STEP_SIZE: {STEP_SIZE}, WIND_DIRECTION: {wind_angle}")
-            # asegurarse de que STL_DIR esté definido y que el archivo origen exista
+            # verify STL_DIR is set and the source file exists
             src = os.path.join(POST_DIR, STL_BASENAME + '.stl')
             # if not os.path.exists(src):
             #     raise FileNotFoundError(f"Source STL not found: {src}")
