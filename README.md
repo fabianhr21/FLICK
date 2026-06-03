@@ -17,6 +17,7 @@ FLICK is a designed tool to help in preprocessing for both simulation and some r
   publisher = {Universitat Politecnica de Catalunya},
   journal   = {GitHub repository},
   url       = {https://github.com/fabianhr21/FLICK/},
+  doi       = {https://doi.org/10.5281/zenodo.20526909}
 }
 ```
 
