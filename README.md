@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
-[![DOI](https://doi.org/10.5281/zenodo.20526909)
+[![DOI](https://zenodo.org/badge/823126493.svg)](https://doi.org/10.5281/zenodo.20526908)
 
 ## Fast and Light Inference for Climate Knowledge
 FLICK is a designed tool to help in preprocessing for both simulation and some ready machine learning tools inference. Please check the [wiki](https://github.com/fabianhr21/FLICK/wiki) for instructions on how to deploy and contribute to the tool. Here you can find the code documentation and examples on every module.
