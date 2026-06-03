@@ -2,7 +2,6 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
-
 [![DOI](https://zenodo.org/badge/823126493.svg)](https://doi.org/10.5281/zenodo.20526908)
 
 ## Fast and Light Inference for Climate Knowledge
