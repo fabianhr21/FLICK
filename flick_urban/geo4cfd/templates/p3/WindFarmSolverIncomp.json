@@ -1,0 +1,78 @@
+{
+   "type":"WindFarmSolverIncomp",
+
+   "mesh_h5_file_path":"",
+   "mesh_h5_file_name":"{{BASENAME}}_Buildings_p3",
+
+   "results_h5_file_path":"",
+   "results_h5_file_name":"results",
+
+   "final_istep":300000001,
+   "maxPhysTime":6401.0,
+   "save_realTimeResultsFile_first":1000.0,
+   "save_realTimeResultsFile_step":1.8,
+   "save_realTimeResultsFile_last":2801.0,
+
+   "saveInitialField":true,
+
+   "save_logFile_first":1,
+   "save_logFile_step":10,
+
+   "save_resultsFile_first":1000000000000000,
+   "save_resultsFile_step":3000000000000,
+
+   "save_restartFile_first":1,
+   "save_restartFile_step":1000,
+
+   "loadRestartFile":true,
+   "restartFile_to_load":2,
+
+   "continue_oldLogs":false,
+
+   "saveAvgFile":true,
+   "loadAvgFile":false,
+
+   "initial_avgTime": 1000.0,
+
+   "saveSurfaceResults":false,
+
+   "flag_les":1,
+   "maxIter":20,
+   "tol":1e-5,
+   "flag_walave":true,
+   "period_walave":600.0,
+   "flag_fs_fix_pressure":true,  
+
+   "cfl_conv":0.7,
+
+   "rho0":1.0,
+   "Lz":"{{LZ}}",
+   "Lhub":100.0,
+   "vinf":6.1,
+   "rough":1.53,
+   "wind_alpha": 90.0,
+
+   "have_witness":true,
+   "witness_inp_file_name":"witness.txt",
+   "witness_h5_file_name":"resultwit.h5",
+   "leapwit":1,
+   "nwit":500,
+   "wit_save_u_i":true,
+   "wit_save_pr":true,
+   "wit_save_rho":false,
+   "continue_witness":false,
+
+   "bouCodes":
+   [
+      {"id":1, "bc_type":"bc_type_non_slip_adiabatic"},
+      {"id":2, "bc_type":"bc_type_slip_wall_model"},
+      {"id":3, "bc_type":"bc_type_slip_wall_model"},
+      {"id":4, "bc_type":"bc_type_slip_adiabatic"},
+      {"id":5, "bc_type":"bc_type_slip_adiabatic"},
+      {"id":6, "bc_type":"bc_type_far_field"},
+      {"id":7, "bc_type":"bc_type_far_field"},
+      {"id":8, "bc_type":"bc_type_recirculation_inlet"},
+      {"id":9, "bc_type":"bc_type_outlet_incomp"},
+      {"id":10, "bc_type":"bc_type_non_slip_adiabatic"}
+   ]
+}
