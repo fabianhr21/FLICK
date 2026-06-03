@@ -1,14 +1,17 @@
-import ansa
-from ansa import base, mesh, constants,session,dm
-from ansa import *
-import CreateDomain 
-import os 
+import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import ansa
+from ansa import base, mesh, constants, session
+from ansa import *
+import CreateDomain
 
 deck = constants.OPENFOAM
-working_directory = "/home/fabianh/ANSA/automation/"
-input_file = "mesh_bcn_script-test_bcn_Buildings"
-target_path = "/home/fabianh/ANSA/automation/"
+# USER: Set these paths for your case
+working_directory = "/path/to/case/output/"
+input_file = "Buildings"
+target_path = "/path/to/case/output/"
 h_max = 150
 def main():
 	# Input StereoLithography from City4CFD

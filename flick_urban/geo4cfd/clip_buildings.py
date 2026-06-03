@@ -23,9 +23,7 @@ import pdal
 import json
 import math
 
-# Add polyprep to path - ensure this folder exists relative to script execution
-sys.path.append('./polyprep')
-from polyprep import process_polygons
+from .polyprep import process_polygons
 
 # Define default CRS
 DEFAULT_CRS = 'EPSG:4326' 

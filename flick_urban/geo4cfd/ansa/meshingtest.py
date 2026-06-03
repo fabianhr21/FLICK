@@ -1,16 +1,15 @@
-import ansa
-from ansa import base, mesh, constants,session,dm
-from ansa import *
-import CreateDomain 
-from GetVertical import separate_faces_by_vector
-# import orXYZ
-import os 
+import os
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import ansa
+from ansa import base, mesh, constants, session, batchmesh
+from ansa import *
+import CreateDomain
+from GetVertical import separate_faces_by_vector
 import math
 import argparse
-import sys
 import shutil
-from ansa import batchmesh
 deck = constants.OPENFOAM
 
 def merge_pids(deck,src_pid_list,tgt_pid_list):

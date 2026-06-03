@@ -4,8 +4,9 @@ import ansa
 from ansa import *
 
 deck = constants.OPENFOAM
-output_path = "/home/fabianh/ANSA/Data/cedval/cedval_const/"
-output_name = "cedval_const5"
+# USER: Set these for your case
+output_path = "/path/to/case/output/"
+output_name = "case_name"
 
 def splitTOhexa():
 	m =utils.Messenger()

@@ -39,9 +39,9 @@ make -j$(nproc)
 echo "City4CFD built successfully."
 
 # Create symlink so geo4cfd can find the binary
-cd "$FLIC/flick_urban/preprocess/geo4cfd/"
-ln -sf "../../../../City4CFD/build/city4cfd" .
-echo "Symlink created at flick_urban/preprocess/geo4cfd/city4cfd"
+cd "$FLIC/flick_urban/geo4cfd/"
+ln -sf "../../../City4CFD/build/city4cfd" .
+echo "Symlink created at flick_urban/geo4cfd/city4cfd"
 
 # Compile pyqvarsi
 # cd "$FLIC/pyqvarsi"

@@ -1,20 +1,20 @@
 # PYTHON script
 import os
-import ansa
-from ansa import base, mesh, constants,session,dm
-from ansa import *
-import CreateDomain 
-import IsolateNormalVector
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import ansa
+from ansa import base, mesh, constants, session
+from ansa import *
+import CreateDomain
 import math
-import os
 
 deck = constants.OPENFOAM
-case = "test"
-city = "test/"
-output_path = "/home/fabianh/GEO_CASES/BARCELONA/"  + case + "/output/"
-output_name = case +"_Buildings"
-mn5_geo_path = "/home/fabianh/GEO_CASES/" + case + "/output/MN5/" + case + "_Buildings.geo"
+# USER: Set these for your case
+case = "my_case"
+output_path = "/path/to/case/output/"
+output_name = case + "_Buildings"
+mn5_geo_path = output_path + "MN5/" + case + "_Buildings.geo"
 # distance = -3200 # Precursor length spanwise
 
 def splitTOhexa():

@@ -40,7 +40,8 @@ dependencies = [
 
 [project.optional-dependencies]
 gpu  = ["torch>=1.12"]
-hpc  = ["mpi4py"]
+hpc  = ["mpi4py", "pyqvarsi"]
+geo  = ["osmnx", "geopandas", "pyproj", "laspy", "pdal", "pyarrow", "rtree", "requests"]
 dev  = ["pytest"]
 docs = ["sphinx", "sphinx-rtd-theme", "myst-parser", "sphinx-autodoc-typehints"]
 

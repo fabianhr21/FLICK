@@ -1,16 +1,18 @@
 # PYTHON script
 import os
-import ansa
-from ansa import base, mesh, constants,session,dm
-from ansa import *
-import CreateDomain 
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import ansa
+from ansa import base, mesh, constants, session
+from ansa import *
+import CreateDomain
 import math
 
 deck = constants.OPENFOAM
-city = "BARCELONA/"
-case = "270-46"
-output_path = "/home/fabianh/GEO_CASES/BARCELONA/270-46/output/"
+# USER: Set these for your case
+case = "my_case"
+output_path = "/path/to/case/output/"
 output_name = "precursor"
 distance = -5000  # Precursor length spanwise
 
@@ -127,7 +129,7 @@ def DividePIDbyFaceOrientation(pid_id: int, new_pid_list=None):
     print(f"Divided PID {pid_id} into {used_buckets} orientation‐based PIDs.")
 
 def main(input_file, output_path=output_path, city=city, case=case):
-	mn5_geo_path = "/home/fabianh/GEO_CASES/round_2/" + city + case + "/output/MN5/" + case + "_Buildings.geo"
+	mn5_geo_path = output_path + "MN5/" + case + "_Buildings.geo"
 	output_name = output_path + case
 	# # Load input file
 	base.Open(input_file)

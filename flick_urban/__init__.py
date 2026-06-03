@@ -14,4 +14,4 @@ Example
 
 __version__ = "0.1.0"
 
-from . import preprocess, nn, postprocess
+from . import preprocess, nn, postprocess, geo4cfd

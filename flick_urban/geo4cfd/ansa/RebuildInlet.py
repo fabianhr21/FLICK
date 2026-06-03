@@ -1,11 +1,12 @@
 # PYTHON script
 import os
-import ansa
-from ansa import base, mesh, constants,session,dm
-from ansa import *
-import CreateDomain 
-import IsolateNormalVector
 import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import ansa
+from ansa import base, mesh, constants, session
+from ansa import *
+import CreateDomain
 import math
 
 deck = constants.OPENFOAM

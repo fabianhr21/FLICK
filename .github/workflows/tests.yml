@@ -29,8 +29,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,gpu]"
-          pip install numpy-stl mpi4py pyqvarsi h5py
+          pip install -e ".[dev,gpu,hpc]"
 
       - name: Run tests
         run: pytest Testsuite/ -v --tb=short

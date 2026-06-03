@@ -10,3 +10,4 @@ flick_urban
    flick_urban.preprocess
    flick_urban.nn
    flick_urban.postprocess
+   flick_urban.geo4cfd

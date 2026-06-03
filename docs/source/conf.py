@@ -22,6 +22,12 @@ exclude_patterns = []
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 
+autodoc_mock_imports = [
+    "ansa", "pdal", "laspy", "osmnx", "geopandas", "pyproj",
+    "pyarrow", "rtree", "shapely", "fiona", "requests",
+    "torch", "mpi4py", "pyQvarsi",
+]
+
 autodoc_default_options = {
     "members": True,
     "undoc-members": False,

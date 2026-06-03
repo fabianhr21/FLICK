@@ -3,19 +3,19 @@ import os
 import sys
 
 # Add ANSA scripts directory to path so CreateDomain and other ANSA utilities are importable
-_ANSA_SCRIPTS_DIR = "/home/fabianh/vscode/FLICK/flick_urban/geo4cfd/ansa"
-sys.path.insert(0, _ANSA_SCRIPTS_DIR)
+_ANSA_SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "flick_urban", "geo4cfd", "ansa")
+sys.path.insert(0, os.path.abspath(_ANSA_SCRIPTS_DIR))
 
 import ansa
 from ansa import base, mesh, constants, session, batchmesh
 from ansa import *
 import CreateDomain
-import IsolateNormalVector
 import math
 
 deck = constants.OPENFOAM
+# USER: Set these for your case
 case = "grid_of_cubes"
-output_path = "/home/fabianh/vscode/FLICK/Examples/geo4cfd/output/"
+output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output") + os.sep
 output_name = "grid_of_cubes"
 mn5_geo_path = output_path + "MN5/" + case + ".geo"
 # distance = -3200 # Precursor length spanwise

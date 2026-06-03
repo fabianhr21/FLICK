@@ -1,18 +1,21 @@
+import os
+import sys
+_ANSA_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _ANSA_DIR)
+
 import ansa
-from ansa import base, mesh, constants,session,dm
+from ansa import base, mesh, constants, session
 from ansa import *
 import CreateDomainConst
 from GetVertical import separate_faces_by_vector
-import os 
-import sys
 import math
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/ANSA/Data/scripts_final/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/ANSA/Data/cedval/cedval_const/"
-# input_file = "cityBlocks"
-input_file = "cedval"
-target_path = "/home/fabianh/ANSA/Data/cedval/cedval_const/"
+params = os.path.join(_ANSA_DIR, "MESH_PARAMETERS_MANDATORY.ansa_mpar")
+# USER: Set these paths for your case
+working_directory = "/path/to/case/output/"
+input_file = "Buildings"
+target_path = "/path/to/case/output/"
 h_max = 150
 
 def GroundCreate(x_min,x_max,y_min,y_max,z_min,z_max,h_max):

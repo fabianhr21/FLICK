@@ -13,11 +13,13 @@ import math
 import shutil
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/vscode/FLICK/flick_urban/geo4cfd/ansa/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/vscode/FLICK/flick_urban/geo4cfd/ansa/"
-file_path = "/home/fabianh/vscode/FLICK/Examples/geo4cfd/"
+_ABS_ANSA_DIR = os.path.abspath(_ANSA_SCRIPTS_DIR)
+params = os.path.join(_ABS_ANSA_DIR, "MESH_PARAMETERS_MANDATORY.ansa_mpar")
+working_directory = _ABS_ANSA_DIR + os.sep
+file_path = os.path.dirname(os.path.abspath(__file__)) + os.sep
+# USER: Set these for your case
 input_file = "grid_of_cubes"
-target_path = "/home/fabianh/vscode/FLICK/Examples/geo4cfd/output/"
+target_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output") + os.sep
 
 
 def generate_geo(geo_script, target_geo, input_file,y_length,prec_length):

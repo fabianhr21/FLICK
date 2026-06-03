@@ -8,7 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - `flick_urban` installable Python package (`pip install -e .`)
 - Proper package structure: `flick_urban.preprocess`, `flick_urban.nn`, `flick_urban.postprocess`
-- `flick_urban.preprocess.geo4cfd.ansa` submodule with all ANSA meshing automation scripts
+- `flick_urban.geo4cfd.ansa` submodule with all ANSA meshing automation scripts
 - `pyproject.toml` with optional dependency groups: `gpu`, `hpc`, `dev`, `docs`
 - Split requirements files: `requirements_gpu.txt`, `requirements_hpc.txt`, `requirements_dev.txt`, `requirements_docs.txt`
 - Sphinx documentation scaffold with autodoc API reference

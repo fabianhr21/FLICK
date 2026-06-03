@@ -26,15 +26,13 @@ import json
 import math
 import requests
 
-# Add polyprep to path - ensure this folder exists relative to script execution
-sys.path.append('./polyprep')
-from polyprep import process_polygons
+from .polyprep import process_polygons
 
 # Define default CRS
 DEFAULT_CRS = 'EPSG:4326'
 
 GBA_BASE_URL = "https://data.source.coop/tge-labs/globalbuildingatlas-lod1/"
-GBA_CACHE_DIR = "/home/fabianh/GEO_CASES/GBA_cache/"
+GBA_CACHE_DIR = os.getenv("GBA_CACHE_DIR", os.path.join(os.path.expanduser("~"), ".cache", "gba_tiles"))
 
 # NOTE: Commented out for portability. valid PDAL environment usually handles this.
 # os.environ['PDAL_DRIVER_PATH'] = '/home/fabianh/anaconda3/envs/qgis_env/bin/pdal'

@@ -1,22 +1,23 @@
-import ansa
-from ansa import base, mesh, constants,session,dm
-from ansa import *
-import CreateDomain 
-from GetVertical import separate_faces_by_vector
-# import orXYZ
-import os 
+import os
 import sys
+_ANSA_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _ANSA_DIR)
+
+import ansa
+from ansa import base, mesh, constants, session, batchmesh
+from ansa import *
+import CreateDomain
+from GetVertical import separate_faces_by_vector
 import math
 import argparse
-import sys
 import shutil
-from ansa import batchmesh
 
 deck = constants.OPENFOAM
-params = "/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/MESH_PARAMETERS_MANDATORY.ansa_mpar"
-working_directory = "/home/fabianh/GEO_CASES/BARCELONA/"
-input_file = "bcn_Buildings"
-target_path = "/home/fabianh/GEO_CASES/BARCELONA/"
+params = os.path.join(_ANSA_DIR, "MESH_PARAMETERS_MANDATORY.ansa_mpar")
+working_directory = _ANSA_DIR + os.sep
+# USER: Set these paths for your case
+input_file = "Buildings"
+target_path = "/path/to/case/output/"
 h_max = 150
 
 def generate_geo(geo_script, target_geo, input_file,y_length,prec_length):
