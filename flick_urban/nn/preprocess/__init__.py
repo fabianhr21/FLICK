@@ -1,5 +1,5 @@
 """
-flick_urban.preprocess — STL geometry preprocessing.
+flick_urban.nn.preprocess — STL geometry preprocessing.
 
 Converts STL city models into HDF5 feature maps used for NN inference.
 Key modules:

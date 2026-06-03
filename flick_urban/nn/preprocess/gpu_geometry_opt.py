@@ -10,7 +10,7 @@ import numpy as np
 from mpi4py import MPI
 import pyQvarsi
 from stl import mesh
-from flick_urban.preprocess.geometry import rotate_stl, move_stl
+from flick_urban.nn.preprocess.geometry import rotate_stl, move_stl
 from scipy.spatial import cKDTree
 from scipy.ndimage import label
 from collections import defaultdict

@@ -1,14 +1,14 @@
-flick_urban.postprocess
-=======================
+flick_urban.nn.postprocess
+==========================
 
-.. automodule:: flick_urban.postprocess
+.. automodule:: flick_urban.nn.postprocess
    :members:
 
-.. automodule:: flick_urban.postprocess.overlap
+.. automodule:: flick_urban.nn.postprocess.overlap
    :members:
 
-.. automodule:: flick_urban.postprocess.functions
+.. automodule:: flick_urban.nn.postprocess.overlap_interp
    :members:
 
-.. automodule:: flick_urban.postprocess.geolocate
+.. automodule:: flick_urban.nn.postprocess.geolocate
    :members:

@@ -47,7 +47,7 @@ def geometry_module():
     sys.modules['trimesh'] = tm_mod
 
     path = os.path.join(
-        os.path.dirname(__file__), '..', 'flick_urban', 'preprocess', 'geometry.py'
+        os.path.dirname(__file__), '..', 'flick_urban', 'nn', 'preprocess', 'geometry.py'
     )
     spec = importlib.util.spec_from_file_location('geometry_integration', path)
     mod = importlib.util.module_from_spec(spec)

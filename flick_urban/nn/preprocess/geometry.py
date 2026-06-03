@@ -1,12 +1,12 @@
 """
-flick_urban.preprocess.geometry — Geometric operations on STL meshes.
+flick_urban.nn.preprocess.geometry — Geometric operations on STL meshes.
 
 Provides rotation, translation, bounding-box calculation, wall-distance
 computation, and plane-mesh generation used throughout the FLICK pipeline.
 
 Example
 -------
->>> from flick_urban.preprocess.geometry import calculate_bounding_box
+>>> from flick_urban.nn.preprocess.geometry import calculate_bounding_box
 >>> mn, mx = calculate_bounding_box('Examples/preprocess/data/grid_of_cubes.stl')
 >>> print(mn, mx)   # [0. 0. 0.] [390. 390.  30.]
 """

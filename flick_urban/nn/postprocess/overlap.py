@@ -6,7 +6,7 @@ exponential-decay blending at tile boundaries.
 
 Example
 -------
-    python -m flick_urban.postprocess.overlap \\
+    python -m flick_urban.nn.postprocess.overlap \\
         -dataset_path ./output/output0-grid_of_cubes/ \\
         -basename grid_of_cubes -N_points 256 -x_frames 5 -y_frames 5
 """

@@ -1,18 +1,20 @@
-flick_urban.preprocess
-======================
+flick_urban.nn.preprocess
+=========================
 
-.. automodule:: flick_urban.preprocess
+.. automodule:: flick_urban.nn.preprocess
    :members:
 
-.. automodule:: flick_urban.preprocess.stl2geo
+.. automodule:: flick_urban.nn.preprocess.stl2geo
    :members:
 
-.. automodule:: flick_urban.preprocess.geometry
+.. automodule:: flick_urban.nn.preprocess.geometry
    :members:
 
-.. automodule:: flick_urban.preprocess.gpu_geometry
+.. automodule:: flick_urban.nn.preprocess.gpu_geometry_opt
    :members:
 
-.. automodule:: flick_urban.preprocess.utils
+.. automodule:: flick_urban.nn.preprocess.utils
    :members:
 
+.. automodule:: flick_urban.nn.preprocess.features
+   :members:

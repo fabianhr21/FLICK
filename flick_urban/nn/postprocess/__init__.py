@@ -1,5 +1,5 @@
 """
-flick_urban.postprocess — Post-processing of tiled wind field predictions.
+flick_urban.nn.postprocess — Post-processing of tiled wind field predictions.
 
 Modules:
   - overlap:        stitch overlapping tiles with exponential-decay blending

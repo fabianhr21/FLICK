@@ -13,4 +13,4 @@ if not os.path.exists(STL_PATH):
 print(f"STL geometry: {STL_PATH}")
 print("Run STL2GeoTool with desired arguments to generate H5 output.")
 print("Example (with MPI):")
-print(f"  mpirun -n 4 python -m flick_urban.preprocess.stl2geo {STL_PATH} -o output/")
+print(f"  mpirun -n 4 python -m flick_urban.nn.preprocess.stl2geo {STL_PATH} -o output/")

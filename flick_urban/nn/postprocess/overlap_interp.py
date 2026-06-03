@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import re
-from flick_urban.postprocess.overlap import (
+from flick_urban.nn.postprocess.overlap import (
     extract_upc_number, read_output_files, interpolate,
     overlap_matrix, vel_magNdir, save_matrix_as_image,
 )

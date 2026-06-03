@@ -1,5 +1,5 @@
 import numpy as np
-from flick_urban.postprocess.overlap import overlap_matrix
+from flick_urban.nn.postprocess.overlap import overlap_matrix
 
 
 def test_overlap_matrix():

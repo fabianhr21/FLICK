@@ -6,10 +6,10 @@ to the HDF5 files produced by the preprocessing pipeline.
 
 Usage
 -----
-    python -m flick_urban.preprocess.features \\
+    python -m flick_urban.nn.preprocess.features \\
         -stl_basename grid_of_cubes -output_path ./output/ -wind_direction 0
 """
-from flick_urban.preprocess.geometry import append_UV_features
+from flick_urban.nn.preprocess.geometry import append_UV_features
 import os
 import argparse
 

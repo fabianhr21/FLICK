@@ -6,7 +6,7 @@ maps pixel-space U/V fields to UTM/geographic coordinates.
 
 Usage
 -----
-    python -m flick_urban.postprocess.geolocate \\
+    python -m flick_urban.nn.postprocess.geolocate \\
         -basename grid_of_cubes -dataset_path ./final_output/ \\
         -gcp_path ./output/ -wind_direction 0
 """

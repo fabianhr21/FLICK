@@ -9,4 +9,4 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 print("Run post-processing overlap with:")
-print("  python -m flick_urban.postprocess.overlap --input_dir <nn_output_dir> --output_dir <final_output_dir>")
+print("  python -m flick_urban.nn.postprocess.overlap --input_dir <nn_output_dir> --output_dir <final_output_dir>")

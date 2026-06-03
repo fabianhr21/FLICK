@@ -6,7 +6,7 @@ for each tile. Use stl2geo.py for the GPU-accelerated version.
 
 Usage
 -----
-    mpirun -n 4 python -m flick_urban.preprocess.stl2geo_loop \\
+    mpirun -n 4 python -m flick_urban.nn.preprocess.stl2geo_loop \\
         -stl_dir ./data/ -stl_basename grid_of_cubes -output_path ./output/
 """
 from __future__ import print_function, division
@@ -16,7 +16,7 @@ mpi4py.rc.recv_mprobe = False
 from mpi4py import MPI
 import csv
 import os, re, glob, subprocess, numpy as np
-from flick_urban.preprocess.geometry import (
+from flick_urban.nn.preprocess.geometry import (
     geometrical_magnitudes, save_scalarfield, plane_generation,
     calculate_bounding_box, append_UV_features, move_stl_to_origin,
     rotate_geometry,

@@ -91,7 +91,7 @@ def test_STL2GeoTool_gpu(tmp_path):
             shutil.copy(src, dest)
     gm_mod.rotate_geometry = rotate_geom
     sys.modules['gmtry_utils'] = gm_mod
-    sys.modules['flick_urban.preprocess.geometry'] = gm_mod
+    sys.modules['flick_urban.nn.preprocess.geometry'] = gm_mod
 
     calls = {}
     gpu_mod = types.ModuleType('gpu_gmtry_utils')
@@ -104,9 +104,9 @@ def test_STL2GeoTool_gpu(tmp_path):
     gpu_mod.geometrical_data_extractor_gpu = lambda *a, **k: None
     sys.modules['gpu_gmtry_utils'] = gpu_mod
     sys.modules['opt_gpu_gmtry_utils'] = gpu_mod
-    sys.modules['flick_urban.preprocess.gpu_geometry_opt'] = gpu_mod
+    sys.modules['flick_urban.nn.preprocess.gpu_geometry_opt'] = gpu_mod
 
-    script = os.path.join(cwd, 'flick_urban', 'preprocess', 'stl2geo.py')
+    script = os.path.join(cwd, 'flick_urban', 'nn', 'preprocess', 'stl2geo.py')
     sys.argv = [
         'STL2GeoTool.py',
         '-dataset_path', str(tmp_path) + '/',

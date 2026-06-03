@@ -8,7 +8,7 @@ Requires: ifcopenshell, trimesh  (``pip install ifcopenshell trimesh``)
 
 Example
 -------
-    python -m flick_urban.preprocess.stl_from_bim
+    python -m flick_urban.nn.preprocess.stl_from_bim
 """
 import ifcopenshell
 import ifcopenshell.geom

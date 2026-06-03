@@ -32,7 +32,7 @@ def gm():
     trimesh_module.load_mesh = lambda *a, **k: None
     sys.modules['trimesh'] = trimesh_module
 
-    path = os.path.join(os.path.dirname(__file__), '..', 'flick_urban', 'preprocess', 'geometry.py')
+    path = os.path.join(os.path.dirname(__file__), '..', 'flick_urban', 'nn', 'preprocess', 'geometry.py')
     spec = importlib.util.spec_from_file_location('gmtry_utils', path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
