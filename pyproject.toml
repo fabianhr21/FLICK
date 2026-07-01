@@ -11,10 +11,14 @@ license = {file = "LICENSE"}
 requires-python = ">=3.8"
 authors = [
     {name = "Fabian Hernández", email = "fabian.alexis.hernandez@upc.edu"},
-    {name = "Josep María Duró"},
-    {name = "Arnau Miró"},
-    {name = "Oriol Lehmkul"},
-    {name = "Ivette Rodríguez"},
+    {name = "Josep María Duró", email = "josep.maria.duro@upc.edu"},
+    {name = "Arnau Miro",             email = "arnau.miro@upc.edu" },
+    {name = "Oriol Lehmkul", email = "oriol.lehmkuhl@bsc.es"},
+    {name = "Ivette Rodríguez", email = "ivette.rodriguez@upc.edu"},
+]
+maintainers = [
+  {name = "Fabian Hernández", email = "fabian.alexis.hernandez@upc.edu"},
+  {name = "Arnau Miro",     email = "arnau.miro@upc.edu" },
 ]
 keywords = ["urban wind", "CFD", "neural network", "UNet", "urban climate", "wind modelling"]
 classifiers = [
