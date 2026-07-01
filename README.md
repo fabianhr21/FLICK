@@ -43,6 +43,16 @@ Even though the structure of the field seems very similar, the average error is 
 
 [4] Rodríguez, I., Duró, J. M., Mestres, E., Teng, M., & Lehmkuhl, O. (2025). Impact of Wind Direction on Flow Over a Realistic Urban Area: A Large-Eddy Simulation Study. arXiv preprint arXiv:2510.11247. https://arxiv.org/abs/2510.11247
 
+## Acknowledgements
+
+The research leading to this software was financially supported by project 'Under the skin of the city: Urban simulations for nature-based solutions', funded by the Agència de Gestió d'Ajuts Universitaris i de Recerca (AGAUR) under the call PROJECTES DE RECERCA PER A LA MITIGACIÓ I ADAPTACIÓ AL CANVI CLIMÀTIC, with grant agreement No 2023 CLIMA 00097
+
 ## Contact
+
+# Contact
+
+ivette.rodriguez@upc.edu
+
+# Main maintainer
 
 fabian.alexis.hernandez@upc.edu
