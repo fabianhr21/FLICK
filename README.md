@@ -12,7 +12,7 @@ Neural network pipeline takes the preprocessed geometry — encoded as 256×256 
 
 Postprocessor reconstructs the full-domain wind field from overlapping tiles and computes velocity magnitude and direction maps ready for visualization or downstream analysis.
 
-The package targets urban climate researchers and city planners who need fast wind environment assessments without running full CFD simulations. Developed at Universitat Politècnica de Catalunya (UPC) and the Barcelona Supercomputing Center (BSC
+The package targets urban climate researchers and city planners who need fast wind environment assessments without running full CFD simulations. Developed at Universitat Politècnica de Catalunya (UPC) and the Barcelona Supercomputing Center (BSC).
 
 ## Fast and Light Inference for Climate Knowledge
 FLICK is a designed tool to help in preprocessing for both simulation and some ready machine learning tools inference. Please check the [wiki](https://github.com/fabianhr21/FLICK/wiki) for instructions on how to deploy and contribute to the tool. Here you can find the code documentation and examples on every module.
@@ -59,4 +59,4 @@ The research leading to this software was financially supported by project 'Unde
 
 ## Contact
 
-ivette.rodriguez@upc.edu & fabian.alexis.hernandez@upc.edu
+For any inquiries regarding the project, contact ivette.rodriguez@upc.edu; for inquiries regarding the code or functionality, contact fabian.alexis.hernandez@upc.edu
