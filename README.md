@@ -49,10 +49,4 @@ The research leading to this software was financially supported by project 'Unde
 
 ## Contact
 
-# Contact
-
-ivette.rodriguez@upc.edu
-
-# Main maintainer
-
-fabian.alexis.hernandez@upc.edu
+ivette.rodriguez@upc.edu & fabian.alexis.hernandez@upc.edu
