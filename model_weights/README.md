@@ -8,6 +8,7 @@ in this repository** due to file size and ongoing research use.
 Request the weights by emailing:
 
 **fabian.alexis.hernandez@upc.edu**
+CC: **ivette.rodriguez@upc.edu**
 
 Subject: `[FLICK] Model weights request`
 
