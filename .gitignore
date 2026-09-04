@@ -47,3 +47,11 @@ ENV/
 results/*.pdf
 results/*.pptx
 results/*.ppt
+
+# Local build symlink to City4CFD binary (created by scripts/compile_tools.sh)
+flick_urban/geo4cfd/city4cfd
+
+# Local test data + generated geo4cfd outputs (large; keep out of the repo)
+test/
+cache/
+**/geo4cfd/**/output/

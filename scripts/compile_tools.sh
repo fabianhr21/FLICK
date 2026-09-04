@@ -35,12 +35,12 @@ echo "Building City4CFD..."
 cd "$FLIC/City4CFD"
 mkdir -p build && cd build
 cmake .. -DCGAL_DIR="$FLIC/City4CFD/cgal-6.0.1"
-make -j$(nproc)
+make -j2
 echo "City4CFD built successfully."
 
 # Create symlink so geo4cfd can find the binary
 cd "$FLIC/flick_urban/geo4cfd/"
-ln -sf "../../../City4CFD/build/city4cfd" .
+ln -sf "../../City4CFD/build/city4cfd" city4cfd
 echo "Symlink created at flick_urban/geo4cfd/city4cfd"
 
 # Compile pyqvarsi
