@@ -1,14 +1,19 @@
 #!/bin/bash
 # Code executor for the workflow
-DIR="path/to/LAS/"
-CITY4CFD="path/to/City4CFD/"
-ansa_path="path/to/ansa/exec"
-working_directory="FLICK/flick_urban/geo4cfd/ansa"
+shopt -s nullglob # skip case-folder loops cleanly instead of using a literal unmatched glob
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"   # FLICK repo root (Examples/geo4cfd -> FLICK)
+CLIPNBUILDINGS="$SCRIPT_DIR/gba_clip_buildings.py"
+DIR="${FLICK_DATA_DIR:-$REPO_ROOT}/"           # base dir holding the city subfolders; override with FLICK_DATA_DIR
+CITIES=("test") # TODO: set to the city subfolder names under $DIR
+CITY4CFD="$REPO_ROOT/City4CFD/build"
+ansa_path="${ANSA_EXEC:-path/to/ansa/exec}"    # set ANSA_EXEC to your ANSA executable
+working_directory="$REPO_ROOT"
 
 # Directory where the p2 and p3 template folders live
-templates_dir="FLICK/flick_urban/geo4cfd/templates/"
+templates_dir="$REPO_ROOT/flick_urban/geo4cfd/templates/"
 
-bbox_bounding=750
+bbox_bounding=500
 CRS=""
 AREA_GEOJSON=""
 
@@ -61,25 +66,26 @@ for city in "${CITIES[@]}"; do
                 exit 1
             fi
             echo "  Using clip polygon: $area_geojson"
-            python GBA_clipnbuildings_run.py -id "$f" --area_geojson "$area_geojson" -o "$f" --output_filename "$BASENAME" "${crs_arg[@]}"
+            python "$CLIPNBUILDINGS" -id "$f" --area_geojson "$area_geojson" -o "$f" --output_filename "$BASENAME" "${crs_arg[@]}"
         elif [[ -n "${center_dictionary[$BASENAME]}" ]]; then
             center_latlon="${center_dictionary[$BASENAME]}"
             echo "  Using center_latlon from dictionary: $center_latlon"
-            python GBA_clipnbuildings_run.py -id "$f" --center_latlon $center_latlon --bbox_bounding $bbox_bounding -o "$f" --output_filename "$BASENAME" "${crs_arg[@]}"
+            python "$CLIPNBUILDINGS" -id "$f" --center_latlon $center_latlon --bbox_bounding $bbox_bounding -o "$f" --output_filename "$BASENAME" "${crs_arg[@]}"
         else
-            python GBA_clipnbuildings_run.py -id "$f" --bbox_bounding $bbox_bounding -o "$f" --output_filename "$BASENAME" "${crs_arg[@]}"
+            python "$CLIPNBUILDINGS" -id "$f" --bbox_bounding $bbox_bounding -o "$f" --output_filename "$BASENAME" "${crs_arg[@]}"
         fi
 
     # Run City4CFD
     $CITY4CFD/city4cfd "$f/output/config.json" --output_dir "$f/output/"
-    # Get average height / domain dimensions
-    python witness.py -stl "$f/output/${BASENAME}_Buildings.stl" -p "$f/output/" -o "$f/output/"
-
-    buildings_file="${f}output/${BASENAME}_Buildings.stl"
-    # # Copy and process .geo script
-    cp "${working_directory}script_gmsh_ParaPC_orden1.geo" "${f}output/${BASENAME}_Buildings.geo"
-    $ansa_path -nogui -noopencl \
-        -execscript "${working_directory}args_check_flat.py|main('${buildings_file}','${working_directory}','${f}output/','${f}output/')"
-
-    python replace_templates.py "$f" "$BASENAME" "$templates_dir"
+    done
 done
+    # # Get average height / domain dimensions
+    # python "$SCRIPT_DIR/witness.py" -stl "$f/output/${BASENAME}_Buildings.stl" -p "$f/output/" -o "$f/output/"
+
+    # buildings_file="${f}output/${BASENAME}_Buildings.stl"
+    # # # Copy and process .geo script
+    # cp "${working_directory}script_gmsh_ParaPC_orden1.geo" "${f}output/${BASENAME}_Buildings.geo"
+    # $ansa_path -nogui -noopencl \
+    #     -execscript "${working_directory}args_check_flat.py|main('${buildings_file}','${working_directory}','${f}output/','${f}output/')"
+
+    # python "$SCRIPT_DIR/replace_templates.py" "$f" "$BASENAME" "$templates_dir"
