@@ -34,7 +34,7 @@ from polyprep import process_polygons
 DEFAULT_CRS = 'EPSG:4326'
 
 GBA_BASE_URL = "https://data.source.coop/tge-labs/globalbuildingatlas-lod1/"
-GBA_CACHE_DIR = "/home/fabianh/GEO_CASES/GBA_cache/"
+GBA_CACHE_DIR = os.environ.get("GBA_CACHE_DIR", os.path.expanduser("~/GEO_CASES/GBA_cache/"))
 
 # NOTE: Commented out for portability. valid PDAL environment usually handles this.
 # os.environ['PDAL_DRIVER_PATH'] = '/home/fabianh/anaconda3/envs/qgis_env/bin/pdal'

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-input_dir="/home/fabianh/ANSA/CASES_MESHES/"
-working_dir="/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/"
+input_dir="${ANSA_CASES_DIR:-/home/fabianh/ANSA/CASES_MESHES/}"
+working_dir="${ANSA_SCRIPTS_DIR:-/home/fabianh/FLICK/pre-process/geo4CFD/ANSA_SCRIPTS/}"
 cities=("BARCELONA")
 scripts_final="./"
-ansa_path=/apps/ANSA/24.1.2/ansa_v24.1.2/ansa64.sh
+ansa_path="${ANSA_EXEC:-/apps/ANSA/24.1.2/ansa_v24.1.2/ansa64.sh}"
 
 for city in "${cities[@]}"; do
     echo "Processing city: $city"
