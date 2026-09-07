@@ -77,7 +77,7 @@ echo "========================================================"
 # STEP 1 — Preprocessing (STL → HDF5 feature maps)
 # =============================================================================
 
-mpirun -n "${SLURM_NTASKS}" python -m flick_urban.preprocess.stl2geo \
+mpirun -n "${SLURM_NTASKS}" python -m flick_urban.nn.preprocess.stl2geo \
     -stl_dir       "${STL_DIR}" \
     -stl_basename  "${STL_BASENAME}" \
     -output_path   "${OUTPUT_PATH}" \
