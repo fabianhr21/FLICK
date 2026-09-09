@@ -35,7 +35,7 @@ import argparse
 TARGET_EXTENSIONS = {'.sh', '.geo', '.json', '.dat'}
 
 # Template subdirectories to copy into MN5
-TEMPLATE_DIRS = ['p2', 'p3']
+TEMPLATE_DIRS = ['p2', 'p3', 'p4']
 
 
 def parse_domain_dimensions(filepath):
