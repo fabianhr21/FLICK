@@ -21,7 +21,7 @@ FLICK is a designed tool to help in preprocessing for both simulation and some r
 
 ```bash
 @misc{FLICK,
-  author    = {Hernández, Fabián and Calafell, Joan and Duró, Josep M. and Miro, Arnau and Lehmkuhl, Oriol and Rodríguez, Ivette},
+  author    = {Hernández, Fabián and Duró, Josep M. and Miro, Arnau and Lehmkuhl, Oriol and Rodríguez, Ivette},
   title     = {FLICK: Fast and Light Inference for Climate Knowledge},
   year      = {2026},
   publisher = {Universitat Politecnica de Catalunya},
